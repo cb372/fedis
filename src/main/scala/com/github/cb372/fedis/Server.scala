@@ -7,12 +7,12 @@ import collection.mutable.{Map => MMap}
 import com.twitter.finagle.redis._
 import protocol._
 import java.net.{SocketAddress, InetSocketAddress}
-import com.twitter.finagle.builder.ServerBuilder
+import com.twitter.finagle.builder.{Server => FinagleServer, ServerBuilder}
 
 
 object Server {
 
-  def build(port: Int = 6379, serverPassword: Option[String] = None) {
+  def build(port: Int = 6379, serverPassword: Option[String] = None): FinagleServer = {
     val sessionMgmt = new SessionManagement(serverPassword)
     val authCheck = new AuthCheck(serverPassword.isDefined)
     val redis = new RedisService
