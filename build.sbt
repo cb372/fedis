@@ -10,6 +10,9 @@ resolvers += "Twitter Maven repo" at "http://maven.twttr.com/"
 
 libraryDependencies += "com.twitter" % "finagle-redis" % "4.0.5"
 
+libraryDependencies += "net.debasishg" %% "redisclient" % "2.5" % "test"
+
 libraryDependencies += "org.scalatest" %% "scalatest" % "1.7.2" % "test"
 
 scalacOptions += "-unchecked"
+

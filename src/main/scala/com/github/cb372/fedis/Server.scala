@@ -21,7 +21,7 @@ object Server {
 
     ServerBuilder()
       .codec(RedisServerCodec())
-      .bindTo(new InetSocketAddress(6379))
+      .bindTo(new InetSocketAddress(port))
       .name("redisserver")
       .build(myService)
     }
