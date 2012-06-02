@@ -3,7 +3,7 @@ package com.github.cb372.fedis.db
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers
 import com.twitter.util.FuturePool
-import com.twitter.finagle.redis.protocol.{BulkReply, ErrorReply, IntegerReply}
+import com.twitter.finagle.redis.protocol._
 
 /**
  * Author: chris
@@ -108,4 +108,57 @@ class DbSpec extends FlatSpec with ShouldMatchers {
     db.getBit("foo", 10).get should equal(IntegerReply(0))
   }
 
+  behavior of "SETNX"
+
+  it should "set the key if it does not already exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.setNx("foo", "hello".getBytes).get should equal(IntegerReply(1))
+  }
+
+  it should "do nothing if the key already exists" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.setNx("foo", "hello".getBytes).get should equal(IntegerReply(0))
+    db.get("foo").get.asInstanceOf[BulkReply].message should equal("abc".getBytes)
+  }
+
+  behavior of "MGET"
+
+  it should "not allow an empty list" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.mget(List()).get should equal(ErrorReply("ERR wrong number of arguments for 'mget' command"))
+  }
+
+  it should "return empty byte arrays for non-existent keys" in {
+    val db = new Db(FuturePool.immediatePool)
+    val values = db.mget(List("foo", "bar")).get.asInstanceOf[MBulkReply].messages
+    values should have length (2)
+    values(0) should have length (0)
+    values(1) should have length (0)
+  }
+
+  it should "return values for keys that exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.set("bar", "def".getBytes)
+    val values = db.mget(List("foo", "bar")).get.asInstanceOf[MBulkReply].messages
+    values should have length(2)
+    values(0) should equal("abc".getBytes)
+    values(1) should equal("def".getBytes)
+  }
+
+  behavior of "MSET"
+
+  it should "not allow an empty map" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.mset(Map()).get should equal(ErrorReply("ERR wrong number of arguments for 'mset' command"))
+  }
+
+  it should "set all keys to their corresponding values" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.mset(Map("a" -> "1".getBytes, "b" -> "2".getBytes)).get
+    reply should equal(StatusReply("OK"))
+    db.get("a").get.asInstanceOf[BulkReply].message should equal("1".getBytes)
+    db.get("b").get.asInstanceOf[BulkReply].message should equal("2".getBytes)
+  }
 }

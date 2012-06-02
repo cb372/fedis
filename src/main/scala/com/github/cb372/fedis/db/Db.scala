@@ -7,6 +7,7 @@ import com.twitter.finagle.redis.protocol._
 
 object Db {
   private val zeroByte = 0.toByte
+  private def nil = new Array[Byte](0)
 }
 
 class Db(pool: FuturePool) {
@@ -85,7 +86,7 @@ class Db(pool: FuturePool) {
           val intVal = stringVal.toInt
           val incremented = intVal + amount
           if (overflowCheck(intVal, amount, incremented)) {
-            keyValues.put(key, String.valueOf(incremented).getBytes)
+            keyValues += key -> String.valueOf(incremented).getBytes
             IntegerReply(incremented)
           } else
             ErrorReply("ERR increment or decrement would overflow")
@@ -97,7 +98,7 @@ class Db(pool: FuturePool) {
       }
       case None => {
         // store the specified amount (treat the non-existent value as 0)
-        keyValues.put(key, Array(amount.toByte))
+        keyValues += key -> Array(amount.toByte)
         IntegerReply(amount)
       }
     }
@@ -111,6 +112,25 @@ class Db(pool: FuturePool) {
       after > before
     else
       after < before
+  }
+
+  def mget(keys: List[String]) = pool {
+    keys match {
+      case Nil => ErrorReply("ERR wrong number of arguments for 'mget' command")
+      case _ => {
+        val values = keys map(keyValues.get(_).getOrElse(Db.nil))
+        MBulkReply(values)
+      }
+    }
+  }
+
+  def mset(kv: Map[String, Array[Byte]]) = pool {
+    if (kv isEmpty)
+      ErrorReply("ERR wrong number of arguments for 'mset' command")
+    else {
+      kv foreach(keyValues += _)
+      StatusReply("OK")
+    }
   }
 
   def set(key: String, value: Array[Byte]) = pool {
@@ -133,7 +153,7 @@ class Db(pool: FuturePool) {
               // set a 1 bit in the last byte
               extendedArray(offset / 8) = (1 << (7 - (offset % 8))).toByte
             }
-            keyValues.put(key, extendedArray)
+            keyValues += key -> extendedArray
             IntegerReply(0)
           } else {
             val oldByte: Byte = array(offset / 8)
@@ -154,10 +174,19 @@ class Db(pool: FuturePool) {
             // set a 1 bit in the last byte
             byteArray(offset / 8) = (1 << (7 - (offset % 8))).toByte
           }
-          keyValues.put(key, byteArray)
+          keyValues += key -> byteArray
           IntegerReply(0)
         }
       }
+    }
+  }
+
+  def setNx(key: String, value: Array[Byte]) = pool {
+    if (keyValues contains(key))
+      IntegerReply(0)
+    else {
+      keyValues += key -> value
+      IntegerReply(1)
     }
   }
 
