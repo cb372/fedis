@@ -21,3 +21,9 @@ Note that Fedis stores all data in-memory. Nothing is persisted to disk.
 ## Supported commands
 
 See the [Wiki page](https://github.com/cb372/fedis/wiki/Supported-Redis-Commands).
+
+## Restrictions
+
+* Fedis does not provide the same atomicity guarantees as Redis. For example, [MSET](http://redis.io/commands/mset) is not performed atomically.
+
+* Redis supports 64 bit unsigned integers, but Fedis only supports 32 bit integers. (See [here](https://github.com/twitter/finagle/pull/87) for the reason.)
