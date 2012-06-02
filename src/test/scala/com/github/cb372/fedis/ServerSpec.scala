@@ -8,7 +8,7 @@ class ServerSpec extends FlatSpec with ShouldMatchers {
   behavior of "Server"
 
   it should "listen a specified port" in {
-    val server = Server.build(port = 6389)
+    val server = Server.build(Options(port = 6389))
     try {
       import com.redis._
       val r = new RedisClient("localhost", 6389)

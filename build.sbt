@@ -20,9 +20,10 @@ libraryDependencies ++= Seq(
     "com.twitter" %% "util-logging" % "4.0.1" % "runtime"
     )
 
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.0.4" % "runtime"
-
-libraryDependencies += "net.debasishg" %% "redisclient" % "2.5" % "test"
+libraryDependencies ++= Seq(
+    "net.debasishg" %% "redisclient" % "2.5" % "test",
+    "ch.qos.logback" % "logback-classic" % "1.0.4" % "test"
+    )
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "1.7.2" % "test"
 

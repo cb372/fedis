@@ -8,8 +8,7 @@ import com.twitter.finagle.redis.ServerError
 import db.Db
 import com.twitter.finagle.redis.protocol._
 
-class RedisService extends Service[SessionAndCommand, Reply] {
-  private val pool = FuturePool(Executors.newFixedThreadPool(4))
+class RedisService(pool: FuturePool) extends Service[SessionAndCommand, Reply] {
 
   private val dbs = Array.fill(Constants.numDbs){new Db(pool)}
 
