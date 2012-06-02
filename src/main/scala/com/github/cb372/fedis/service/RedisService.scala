@@ -27,12 +27,14 @@ class RedisService(pool: FuturePool) extends Service[SessionAndCommand, Reply] {
          * Strings
          */
       case Append(key: String, suffix: Array[Byte]) => db.append(key, suffix)
-      case Get(key: String) => db.get(key)
       case Decr(key: String) => db.decr(key)
       case decrby: DecrBy => db.decrBy(decrby.key, decrby.amount)
+      case Get(key: String) => db.get(key)
+      case GetBit(key: String, offset: Int) => db.getBit(key, offset)
       case Incr(key: String) => db.incr(key)
       case incrby: IncrBy => db.incrBy(incrby.key, incrby.amount) // IncrBy is not a case class :(
       case Set(key: String, value: Array[Byte]) => db.set(key, value)
+      case SetBit(key: String, offset: Int, value: Int) => db.setBit(key, offset, value)
       case Strlen(key: String) => db.strlen(key)
 
       case _ => Future.exception(ServerError("Not implemented"))
