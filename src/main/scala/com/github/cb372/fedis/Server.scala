@@ -43,6 +43,7 @@ object Constants {
 
   // The maximum DB index that can be SELECTed
   val maxDbIndex = 15
+  val numDbs = maxDbIndex + 1 // because DBs are zero-indexed
 
 }
 

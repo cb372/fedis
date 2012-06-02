@@ -11,7 +11,7 @@ import com.twitter.finagle.redis.protocol._
 class RedisService extends Service[SessionAndCommand, Reply] {
   private val pool = FuturePool(Executors.newFixedThreadPool(4))
 
-  private val dbs = Array.fill(Constants.maxDbIndex){new Db(pool)}
+  private val dbs = Array.fill(Constants.numDbs){new Db(pool)}
 
   def apply(req: SessionAndCommand): Future[Reply] = {
     // Choose the appropriate DB for the client
