@@ -5,7 +5,7 @@ import org.scalatest.matchers._
 import com.github.cb372.fedis.{Session, SessionAndCommand}
 import com.twitter.finagle.redis.protocol._
 import com.twitter.finagle.Service
-import com.github.cb372.fedis.db.DummyDbTask
+import com.github.cb372.fedis.db.DummyKeyValueStoreTask
 import com.twitter.util.{NullTimer, FuturePool, Future}
 
 class RedisServiceSpec extends FlatSpec with ShouldMatchers {
@@ -13,7 +13,7 @@ class RedisServiceSpec extends FlatSpec with ShouldMatchers {
   trait Fixture {
     val mockFuturePool = FuturePool.immediatePool
     val mockTimer = new NullTimer
-    val mockReaper = new DummyDbTask
+    val mockReaper = new DummyKeyValueStoreTask
 
     def createService = new RedisService(mockFuturePool, mockTimer, mockReaper)
   }

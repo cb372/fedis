@@ -6,7 +6,9 @@ import com.twitter.util.FuturePool
 import com.twitter.finagle.redis.protocol._
 
 trait KeyValueStore {
-  def asMap: MMap[String, Entry]
+  def iterator: Iterator[(String, Entry)]
+
+  def remove(key: String)
 }
 
 object Db {
@@ -30,7 +32,11 @@ object Replies {
 class Db(pool: FuturePool) extends KeyValueStore {
   private val entries = MMap[String, Entry]()
 
-  def asMap = entries
+  def iterator = entries.iterator
+
+  def remove(key: String) {
+    entries.remove(key)
+  }
 
   /*
    * Keys stuff

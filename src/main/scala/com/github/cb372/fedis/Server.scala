@@ -1,6 +1,6 @@
 package com.github.cb372.fedis
 
-import db.ExpiredValuesReaper
+import db.ExpiredEntriesReaper
 import service.RedisService
 import codec.RedisServerCodec
 import filter.{AuthCheck, SessionManagement}
@@ -24,7 +24,7 @@ object Server {
 
     val sessionMgmt = new SessionManagement(options.serverPassword)
     val authCheck = new AuthCheck(options.serverPassword.isDefined)
-    val reaper = new ExpiredValuesReaper
+    val reaper = new ExpiredEntriesReaper
     val redis = new RedisService(resources.futurePool, resources.timer, reaper)
 
     val myService = sessionMgmt andThen authCheck andThen redis

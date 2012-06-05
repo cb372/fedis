@@ -6,9 +6,9 @@ import com.twitter.finagle.redis.ServerError
 import com.twitter.finagle.redis.protocol._
 import com.twitter.util.{Timer, Future, FuturePool}
 import com.twitter.conversions.time._
-import db.{DbTask, Db}
+import db.{KeyValueStoreTask, Db}
 
-class RedisService(pool: FuturePool, timer: Timer, reaper: DbTask)
+class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
   extends Service[SessionAndCommand, Reply] {
 
   private val dbs = List.fill(Constants.numDbs){new Db(pool)}
