@@ -1,14 +1,17 @@
 package com.github.cb372.fedis
 
+import db.ExpiredValuesReaper
 import service.RedisService
 import codec.RedisServerCodec
 import filter.{AuthCheck, SessionManagement}
-import com.twitter.finagle.redis._
-import protocol._
-import java.net.{SocketAddress, InetSocketAddress}
+
+import com.twitter.finagle.redis.protocol._
 import com.twitter.finagle.builder.{Server => FinagleServer, ServerBuilder}
-import com.twitter.util.{Duration, FuturePool}
-import java.util.concurrent.{ExecutorService, Executors}
+import com.twitter.util.{JavaTimer, Duration, FuturePool}
+
+import java.io.Closeable
+import java.net.{SocketAddress, InetSocketAddress}
+import java.util.concurrent.Executors
 
 case class Options(port: Int = 6379,
                    serverPassword: Option[String] = None,
@@ -17,12 +20,12 @@ case class Options(port: Int = 6379,
 object Server {
 
   def build(options: Options): FinagleServer = {
-    val threadPool = Executors.newFixedThreadPool(options.threadPoolSize)
-    val futurePool = FuturePool(threadPool)
+    val resources = new Resources(options.threadPoolSize)
 
     val sessionMgmt = new SessionManagement(options.serverPassword)
     val authCheck = new AuthCheck(options.serverPassword.isDefined)
-    val redis = new RedisService(futurePool)
+    val reaper = new ExpiredValuesReaper
+    val redis = new RedisService(resources.futurePool, resources.timer, reaper)
 
     val myService = sessionMgmt andThen authCheck andThen redis
 
@@ -32,7 +35,7 @@ object Server {
       .name("redisserver")
       .build(myService)
 
-    new ResourceTidyingServerWrapper(server, threadPool)
+    new ResourceTidyingServerWrapper(server, resources)
   }
 
 
@@ -54,21 +57,36 @@ object Server {
   private def printUsage() =
     println("Usage: %s [port [password]]".format(Server.getClass.getName))
 
+
+  private class Resources(threadPoolSize: Int) extends Closeable {
+    val threadPool = Executors.newFixedThreadPool(threadPoolSize)
+    val futurePool = FuturePool(threadPool)
+
+    val timer = new JavaTimer(false)
+
+    def close() {
+      try {
+        threadPool.shutdownNow()
+      } finally {
+        timer.stop()
+      }
+    }
+  }
+
   /*
    * A decorator for a finagle Server that cleans up
    * any necessary resources after the server is closed.
    */
   private class ResourceTidyingServerWrapper(base: FinagleServer,
-                                             threadPool: ExecutorService) extends FinagleServer {
+                                             resources: Resources) extends FinagleServer {
     def localAddress = base.localAddress
 
     def close(timeout: Duration) {
-      base.close(timeout)
-      cleanupResources()
-    }
-
-    private def cleanupResources() {
-      threadPool.shutdown()
+      try {
+        base.close(timeout)
+      } finally {
+        resources.close()
+      }
     }
   }
 }

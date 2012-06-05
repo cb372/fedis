@@ -2,14 +2,19 @@ package com.github.cb372.fedis
 package service
 
 import com.twitter.finagle.Service
-import com.twitter.util.{Future, FuturePool}
 import com.twitter.finagle.redis.ServerError
-import db.Db
 import com.twitter.finagle.redis.protocol._
+import com.twitter.util.{Timer, Future, FuturePool}
+import com.twitter.conversions.time._
+import db.{DbTask, Db}
 
-class RedisService(pool: FuturePool) extends Service[SessionAndCommand, Reply] {
+class RedisService(pool: FuturePool, timer: Timer, reaper: DbTask)
+  extends Service[SessionAndCommand, Reply] {
 
-  private val dbs = Array.fill(Constants.numDbs){new Db(pool)}
+  private val dbs = List.fill(Constants.numDbs){new Db(pool)}
+
+  // run the expired-values reaper once a second
+  timer.schedule(1 second){reaper.run(dbs)}
 
   def apply(req: SessionAndCommand): Future[Reply] = {
     // Choose the appropriate DB for the client
