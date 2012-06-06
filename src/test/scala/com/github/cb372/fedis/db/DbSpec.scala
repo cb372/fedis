@@ -2,8 +2,8 @@ package com.github.cb372.fedis.db
 
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers
-import com.twitter.util.FuturePool
 import com.twitter.finagle.redis.protocol._
+import com.twitter.util.{Time, FuturePool}
 
 /**
  * Author: chris
@@ -161,4 +161,119 @@ class DbSpec extends FlatSpec with ShouldMatchers {
     db.get("a").get.asInstanceOf[BulkReply].message should equal("1".getBytes)
     db.get("b").get.asInstanceOf[BulkReply].message should equal("2".getBytes)
   }
+
+  private def getExpiry(iterator: Iterator[(String, Entry)], key: String): Option[Time] = {
+    iterator.find({case (k, e) => k == key }).flatMap({case (k, e) => e.expiresAt})
+  }
+
+  behavior of "EXPIRE"
+
+  it should "return 0 if key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.expire("foo", 100L).get
+    reply should equal(IntegerReply(0))
+  }
+
+  it should "set expiry to the given time if key exists" in {
+    Time.withTimeAt(Time.fromMilliseconds(5000L)) { _ =>
+      val db = new Db(FuturePool.immediatePool)
+      db.set("foo", "abc".getBytes)
+
+      val reply = db.expire("foo", 100L).get
+      reply should equal(IntegerReply(1))
+
+      val expiry = getExpiry(db.iterator, "foo")
+      expiry should equal(Some(Time.fromMilliseconds(5000L + 100L * 1000L)))
+    }
+  }
+
+  behavior of "EXPIREAT"
+
+  it should "return 0 if key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.expireAt("foo", Time.fromMilliseconds(25000L)).get
+    reply should equal(IntegerReply(0))
+  }
+
+  it should "set expiry to the given time if key exists" in {
+    Time.withTimeAt(Time.fromMilliseconds(5000L)) { _ =>
+      val db = new Db(FuturePool.immediatePool)
+      db.set("foo", "abc".getBytes)
+      val reply = db.expireAt("foo", Time.fromMilliseconds(25000L)).get
+      reply should equal(IntegerReply(1))
+
+      val expiry = getExpiry(db.iterator, "foo")
+      expiry should equal(Some(Time.fromMilliseconds(25000L)))
+    }
+  }
+
+  behavior of "PERSIST"
+
+  it should "return 0 if the key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.persist("foo").get
+    reply should equal(IntegerReply(0))
+  }
+
+  it should "return 0 if the key has no timeout" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    val reply = db.persist("foo").get
+    reply should equal(IntegerReply(0))
+  }
+
+  it should "remove the timeout from an entry" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.expire("foo", 100L)
+
+    val reply = db.persist("foo").get
+    reply should equal(IntegerReply(1))
+
+    val expiry = getExpiry(db.iterator, "foo")
+    expiry should equal(None)
+  }
+
+  behavior of "TTL"
+
+  it should "return -1 if the key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.ttl("foo").get
+    reply should equal(IntegerReply(-1))
+  }
+
+  it should "return -1 if the key has no timeout" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    val reply = db.ttl("foo").get
+    reply should equal(IntegerReply(-1))
+  }
+
+  it should "return the timeout in seconds if there is one" in {
+    Time.withCurrentTimeFrozen { _ =>
+      val db = new Db(FuturePool.immediatePool)
+      db.set("foo", "abc".getBytes)
+      db.expire("foo", 100L)
+
+      val reply = db.ttl("foo").get
+      reply should equal(IntegerReply(100))
+    }
+  }
+
+  behavior of "SETEX"
+
+  it should "set both the value and the expiry" in {
+    Time.withTimeAt(Time.fromMilliseconds(5000L)) { _ =>
+      val db = new Db(FuturePool.immediatePool)
+
+      val reply = db.setEx("foo", 100L, "abc".getBytes).get
+      reply should equal(StatusReply("OK"))
+
+      val expiry = getExpiry(db.iterator, "foo")
+      expiry should equal(Some(Time.fromMilliseconds(5000L + 100L * 1000L)))
+    }
+  }
+
+
+
 }

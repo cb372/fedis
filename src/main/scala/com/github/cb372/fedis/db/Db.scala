@@ -2,8 +2,9 @@ package com.github.cb372.fedis
 package db
 
 import collection.mutable.{Map => MMap}
-import com.twitter.util.FuturePool
 import com.twitter.finagle.redis.protocol._
+import com.twitter.util.{Time, FuturePool}
+import com.twitter.conversions.time._
 
 trait KeyValueStore {
   def iterator: Iterator[(String, Entry)]
@@ -53,6 +54,49 @@ class Db(pool: FuturePool) extends KeyValueStore {
       IntegerReply(1)
     else
       IntegerReply(0)
+  }
+
+  def expire(key: String, after: Long) = pool {
+    entries get(key) match {
+      case Some(Str(value, _)) => {
+        val newExpiry = Time.now + after.seconds
+        entries += key -> Str(value, Some(newExpiry)) // set to expire N seconds from now
+        IntegerReply(1)
+      }
+      case None => IntegerReply(0)
+    }
+  }
+
+  def expireAt(key: String, timestamp: Time) = pool {
+    entries get(key) match {
+      case Some(Str(value, _)) => {
+        entries += key -> Str(value, Some(timestamp)) // set to expire at specified time (even if it is in the past)
+        IntegerReply(1)
+      }
+      case None => IntegerReply(0)
+    }
+  }
+
+  def persist(key: String) = pool {
+    entries get(key) flatMap {
+      case Str(value, expiry) => {
+        expiry map { _ =>
+          entries += key -> Str(value, None) // remove timeout
+          IntegerReply(1)
+        }
+      }
+    } getOrElse IntegerReply(0) // entry does not exist, or does not have a timeout
+  }
+
+  def ttl(key: String) = pool {
+    entries get(key) flatMap {
+      case Str(value, expiry) => {
+        expiry map { e =>
+          val ttl = (e - Time.now).inSeconds
+          IntegerReply(ttl)
+        }
+      }
+    } getOrElse IntegerReply(-1) // entry does not exist, or does not have a timeout
   }
 
   /*
@@ -204,6 +248,12 @@ class Db(pool: FuturePool) extends KeyValueStore {
         }
       }
     }
+  }
+
+  def setEx(key: String, expireAfter: Long, value: Array[Byte]) = pool {
+    val expiry = Time.now + expireAfter.seconds
+    entries += key -> Str(value, Some(expiry)) // set value and expiry
+    Replies.ok
   }
 
   def setNx(key: String, value: Array[Byte]) = pool {

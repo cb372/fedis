@@ -26,6 +26,10 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
          */
       case Del(keys) => db.del(keys)
       case Exists(key) => db.exists(key)
+      case Expire(key, seconds) => db.expire(key, seconds)
+      case ExpireAt(key, timestamp) => db.expireAt(key, timestamp)
+      case Persist(key) => db.persist(key)
+      case Ttl(key) => db.ttl(key)
 
         /*
          * Strings
@@ -41,6 +45,7 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case MSet(kv) => db.mset(kv)
       case Set(key, value) => db.set(key, value)
       case SetBit(key, offset, value) => db.setBit(key, offset, value)
+      case SetEx(key, seconds, value) => db.setEx(key, seconds, value)
       case SetNx(key, value) => db.setNx(key, value)
       case Strlen(key) => db.strlen(key)
 
