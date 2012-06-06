@@ -88,6 +88,19 @@ class Db(pool: FuturePool) extends KeyValueStore {
     } getOrElse IntegerReply(0) // entry does not exist, or does not have a timeout
   }
 
+  private val rnd = new util.Random
+
+  def randomKey() = pool {
+    if (entries isEmpty)
+      BulkReply(Db.nil)
+    else {
+      val keys = entries.keys
+      // Note: this is O(n) in the size of the map!
+      val randomKey = keys.drop(rnd.nextInt(keys.size)).head
+      BulkReply(randomKey.getBytes("UTF-8"))
+    }
+  }
+
   def ttl(key: String) = pool {
     entries get(key) flatMap {
       case Str(value, expiry) => {

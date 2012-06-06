@@ -29,6 +29,7 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case Expire(key, seconds) => db.expire(key, seconds)
       case ExpireAt(key, timestamp) => db.expireAt(key, timestamp)
       case Persist(key) => db.persist(key)
+      case Randomkey() => db.randomKey()
       case Ttl(key) => db.ttl(key)
 
         /*
