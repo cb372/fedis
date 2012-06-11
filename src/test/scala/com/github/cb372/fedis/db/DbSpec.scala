@@ -274,6 +274,24 @@ class DbSpec extends FlatSpec with ShouldMatchers {
     }
   }
 
+  behavior of "DEL"
+
+  it should "delete all the specified keys and no others" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.set("bar", "def".getBytes)
+    db.set("baz", "ghi".getBytes)
+    db.set("hoge", "jkl".getBytes)
+
+    val reply = db.del(List("bar", "hoge", "wibble")).get
+    reply should equal(IntegerReply(2))
+
+    db.get("foo").get.asInstanceOf[BulkReply].message should equal("abc".getBytes)
+    db.get("bar").get should equal(EmptyBulkReply())
+    db.get("baz").get.asInstanceOf[BulkReply].message should equal("ghi".getBytes)
+    db.get("hoge").get should equal(EmptyBulkReply())
+  }
+
 
 
 }

@@ -11,6 +11,5 @@ trait HasExpiry {
   val expiresAt: Option[Time]
 }
 
-sealed trait Entry extends HasExpiry
+case class Entry(value: RVal, expiresAt: Option[Time] = None) extends HasExpiry
 
-case class Str(value: Array[Byte], expiresAt: Option[Time] = None) extends Entry

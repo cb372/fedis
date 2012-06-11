@@ -16,10 +16,10 @@ class ExpiredEntriesReaperSpec extends FlatSpec with ShouldMatchers {
 
   trait Fixture {
     def createMap = MMap[String, Entry](
-      "expired" -> Str("a".getBytes, Some(Time.fromMilliseconds(999))),
-      "expiring" -> Str("b".getBytes, Some(Time.fromMilliseconds(1000))),
-      "not yet expired" -> Str("c".getBytes, Some(Time.fromMilliseconds(1001))),
-      "no expiry" -> Str("d".getBytes, None)
+      "expired" -> Entry(RString("a".getBytes), Some(Time.fromMilliseconds(999))),
+      "expiring" -> Entry(RString("b".getBytes), Some(Time.fromMilliseconds(1000))),
+      "not yet expired" -> Entry(RString("c".getBytes), Some(Time.fromMilliseconds(1001))),
+      "no expiry" -> Entry(RString("d".getBytes), None)
     )
     def toDb(map: MMap[String, Entry]) = new KeyValueStore {
       def iterator = map.iterator
