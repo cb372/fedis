@@ -326,6 +326,17 @@ class Db(pool: FuturePool) extends KeyValueStore {
     }
   }
 
+  def hgetAll(key: String) = pool {
+    entries get(key) match {
+      case Some(Entry(RHash(hash), _)) => {
+        val list = hash.flatMap({case (k, v) => List(k.array, v)}).toList
+        MBulkReply(list)
+      }
+      case Some(_) => Replies.errWrongType
+      case None => EmptyMBulkReply()
+    }
+  }
+
   /*
    * D'oh! finagle-redis doesn't provide a protocol class for this command.
    */
