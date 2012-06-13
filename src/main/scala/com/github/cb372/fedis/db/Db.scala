@@ -294,7 +294,28 @@ class Db(pool: FuturePool) extends KeyValueStore {
 
   /*
    * Hashes stuff
+   *
+   * Note: Redis hashes support arbitrary byte arrays for both
+   * field keys and values, but finagle-redis is inconsistent
+   * in their typing of field keys.
+   * They use String for some commands and Array[Byte] for others.
    */
+
+  def hdel(key: String, fields: Seq[String]) = pool {
+    entries get(key) match {
+      case Some(Entry(RHash(hash), expiry)) => {
+        val fieldKeys = fields.map(s => HashKey(s.getBytes))
+        val deleteCount = fieldKeys.count(hash.contains(_))
+        if (deleteCount > 0) {
+          val newHash = hash -- fieldKeys
+          entries += key -> Entry(RHash(newHash), expiry) // copy expiry
+        }
+        IntegerReply(deleteCount)
+      }
+      case Some(_) => Replies.errWrongType
+      case None => IntegerReply(0)
+    }
+  }
 
   def hget(key: String, field: Array[Byte]) = pool {
     entries get(key) match {
@@ -302,6 +323,17 @@ class Db(pool: FuturePool) extends KeyValueStore {
         hash.get(HashKey(field)).map(BulkReply(_)) getOrElse(EmptyBulkReply())
       case Some(_) => Replies.errWrongType
       case None => EmptyBulkReply()
+    }
+  }
+
+  /*
+   * D'oh! finagle-redis doesn't provide a protocol class for this command.
+   */
+  def hlen(key: String) = pool {
+    entries get(key) match {
+      case Some(Entry(RHash(hash), _)) => IntegerReply(hash.size)
+      case Some(_) => Replies.errWrongType
+      case None => IntegerReply(0)
     }
   }
 
