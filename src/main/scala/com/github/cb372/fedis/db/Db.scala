@@ -92,7 +92,7 @@ class Db(pool: FuturePool) extends KeyValueStore {
 
   def randomKey() = pool {
     if (entries isEmpty)
-      BulkReply(Db.nil)
+      EmptyBulkReply()
     else {
       val keys = entries.keys
       // Note: this is O(n) in the size of the map!
@@ -117,7 +117,6 @@ class Db(pool: FuturePool) extends KeyValueStore {
    */
 
   def append(key: String, suffix: Array[Byte]) = pool {
-    // TODO add test: should throw error on non-string values
     entries get(key) match {
       case Some(Entry(RString(value), expiry)) => {
         val newBytes = value ++ suffix
@@ -138,7 +137,6 @@ class Db(pool: FuturePool) extends KeyValueStore {
   def decrBy(key: String, amount: Int) = incrBy(key, -amount)
 
   def get(key: String) = pool {
-    // TODO add test: should throw error on non-string values
     entries get(key) match {
       case Some(Entry(RString(value), _)) => BulkReply(value)
       case Some(_) => Replies.errWrongType
@@ -147,7 +145,6 @@ class Db(pool: FuturePool) extends KeyValueStore {
   }
 
   def getBit(key: String, offset: Int) = pool {
-    // TODO add test: should throw error on non-string values
     entries get(key) match {
       case Some(Entry(RString(value), _)) => {
         if (offset >= value.length * 8)
@@ -168,7 +165,6 @@ class Db(pool: FuturePool) extends KeyValueStore {
   def incr(key: String) = incrBy(key, 1)
 
   def incrBy(key: String, amount: Int) = pool {
-    // TODO add test: should throw error on non-string values
     entries get(key) match {
       case Some(Entry(RString(value), expiry)) => {
         val stringVal = new String(value)
@@ -209,7 +205,6 @@ class Db(pool: FuturePool) extends KeyValueStore {
     keys match {
       case Nil => Replies.errWrongNumArgs("mget")
       case _ => {
-        // TODO add test: keys for non-string values should return nil
         val values = keys map(entries.get(_).collect({case Entry(RString(value), _) => value }) getOrElse Db.nil)
         MBulkReply(values)
       }
@@ -220,20 +215,17 @@ class Db(pool: FuturePool) extends KeyValueStore {
     if (kv isEmpty)
       Replies.errWrongNumArgs("mset")
     else {
-      // TODO add test: can overwrite value of any type
       kv foreach {case (key, value) => entries += key -> Entry(RString(value)) } // no expiry (clear any existing expiry)
       Replies.ok
     }
   }
 
   def set(key: String, value: Array[Byte]) = pool {
-    // TODO add test: can overwrite value of any type
     entries += key -> Entry(RString(value)) // no expiry (clear any existing expiry)
     Replies.ok
   }
 
   def setBit(key: String, offset: Int, value: Int) = pool {
-    // TODO add test: should throw error on non-string values
     if (value != 0 && value != 1) {
       Replies.errNotABit
     } else {
@@ -278,7 +270,6 @@ class Db(pool: FuturePool) extends KeyValueStore {
   }
 
   def setEx(key: String, expireAfter: Long, value: Array[Byte]) = pool {
-    // TODO add test: can overwrite value of any type
     val expiry = Time.now + expireAfter.seconds
     entries += key -> Entry(RString(value), Some(expiry)) // set value and expiry
     Replies.ok
@@ -294,7 +285,6 @@ class Db(pool: FuturePool) extends KeyValueStore {
   }
 
   def strlen(key: String) = pool {
-    // TODO add test: should throw error on non-string values
     entries get(key) match {
       case Some(Entry(RString(value), _)) => IntegerReply(value.length)
       case Some(_) => Replies.errWrongType
@@ -319,8 +309,6 @@ class Db(pool: FuturePool) extends KeyValueStore {
     val hashKey = HashKey(field)
     entries get(key) match {
       case Some(Entry(RHash(hash), expiry)) => {
-        println(hash)
-        println(hash.contains(hashKey))
         val alreadyContainsField = hash.contains(hashKey)
         val newHash = hash + (hashKey -> value)
         entries += key -> Entry(RHash(newHash), expiry) // copy expiry

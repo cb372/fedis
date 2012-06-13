@@ -28,6 +28,7 @@ class ExpiredEntriesReaperSpec extends FlatSpec with ShouldMatchers {
       }
     }
   }
+
   behavior of "ExpiredEntriesReaper"
 
   it should "reap entries that have expired or are expiring right now" in new Fixture {
