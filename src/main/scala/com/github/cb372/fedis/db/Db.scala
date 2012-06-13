@@ -301,4 +301,39 @@ class Db(pool: FuturePool) extends KeyValueStore {
       case None => IntegerReply(0)
     }
   }
+
+  /*
+   * Hashes stuff
+   */
+
+  def hget(key: String, field: Array[Byte]) = pool {
+    entries get(key) match {
+      case Some(Entry(RHash(hash), _)) =>
+        hash.get(HashKey(field)).map(BulkReply(_)) getOrElse(EmptyBulkReply())
+      case Some(_) => Replies.errWrongType
+      case None => EmptyBulkReply()
+    }
+  }
+
+  def hset(key: String, field: Array[Byte], value: Array[Byte]) = pool {
+    val hashKey = HashKey(field)
+    entries get(key) match {
+      case Some(Entry(RHash(hash), expiry)) => {
+        println(hash)
+        println(hash.contains(hashKey))
+        val alreadyContainsField = hash.contains(hashKey)
+        val newHash = hash + (hashKey -> value)
+        entries += key -> Entry(RHash(newHash), expiry) // copy expiry
+        if (alreadyContainsField)
+          IntegerReply(0)
+        else
+          IntegerReply(1)
+      }
+      case Some(_) => Replies.errWrongType
+      case None => {
+        entries += key -> Entry(RHash(Map(hashKey -> value)))
+        IntegerReply(1)
+      }
+    }
+  }
 }

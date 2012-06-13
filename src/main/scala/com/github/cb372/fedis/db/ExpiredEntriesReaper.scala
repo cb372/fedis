@@ -1,7 +1,6 @@
 package com.github.cb372.fedis.db
 
 import com.twitter.util.Time
-import collection.mutable.{Map => MMap}
 
 class ExpiredEntriesReaper extends KeyValueStoreTask {
 
