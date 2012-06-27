@@ -73,6 +73,100 @@ class KeysSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     }
   }
 
+  behavior of "KEYS"
+
+  it should "return an empty list if there are no keys in the DB" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.keys("a").get
+    reply should equal(EmptyMBulkReply())
+  }
+
+  it should "return an empty list if there are no matching keys" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    val reply = db.keys("a").get
+    reply should equal(EmptyMBulkReply())
+  }
+
+  it should "return all keys if pattern is *" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.set("bar", "def".getBytes)
+    db.set("baz", "ghi".getBytes)
+
+    val msgs = decodeMBulkReply(db.keys("*").get.asInstanceOf[MBulkReply])
+    msgs should contain("foo")
+    msgs should contain("bar")
+    msgs should contain("baz")
+  }
+
+  it should "return only keys matching pattern using *" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.set("bar", "def".getBytes)
+    db.set("baz", "ghi".getBytes)
+
+    val msgs = decodeMBulkReply(db.keys("b*").get.asInstanceOf[MBulkReply])
+    msgs should not contain("foo")
+    msgs should contain("bar")
+    msgs should contain("baz")
+  }
+
+  it should "return only keys matching pattern using ?" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.set("bar", "def".getBytes)
+    db.set("baz", "ghi".getBytes)
+
+    val msgs = decodeMBulkReply(db.keys("b??").get.asInstanceOf[MBulkReply])
+    msgs should not contain("foo")
+    msgs should contain("bar")
+    msgs should contain("baz")
+  }
+
+  it should "return only keys matching pattern using [ab]" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.set("bar", "def".getBytes)
+    db.set("baz", "ghi".getBytes)
+
+    val msgs = decodeMBulkReply(db.keys("[ab]ar").get.asInstanceOf[MBulkReply])
+    msgs should not contain("foo")
+    msgs should contain("bar")
+    msgs should not contain("baz")
+  }
+
+  it should "return only keys matching complex pattern" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.set("bar", "def".getBytes)
+    db.set("baz", "ghi".getBytes)
+    db.set("barbaz", "jkl".getBytes)
+
+    val msgs = decodeMBulkReply(db.keys("[abc]?[rz]*").get.asInstanceOf[MBulkReply])
+    msgs should not contain("foo")
+    msgs should contain("bar")
+    msgs should contain("baz")
+    msgs should contain("barbaz")
+  }
+
+  it should "respect backslash escapes in pattern" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.set("f?o", "def".getBytes)
+    db.set("f*o", "def".getBytes)
+
+    val msgs = decodeMBulkReply(db.keys("f\\?o").get.asInstanceOf[MBulkReply])
+    msgs should not contain("foo")
+    msgs should contain("f?o")
+    msgs should not contain("f*o")
+
+    val msgs2 = decodeMBulkReply(db.keys("f\\*o").get.asInstanceOf[MBulkReply])
+    msgs2 should not contain("foo")
+    msgs2 should not contain("f?o")
+    msgs2 should contain("f*o")
+  }
+
   behavior of "PERSIST"
 
   it should "return 0 if the key does not exist" in {

@@ -1,8 +1,14 @@
 package com.github.cb372.fedis.db
 
-import com.twitter.finagle.redis.protocol.{BulkReply, EmptyBulkReply, IntegerReply}
+import com.twitter.finagle.redis.protocol._
 import com.twitter.util.Time
 import com.twitter.conversions.time._
+import java.util.regex.PatternSyntaxException
+import com.twitter.finagle.redis.protocol.BulkReply
+import scala.Some
+import com.twitter.finagle.redis.protocol.EmptyBulkReply
+import com.twitter.finagle.redis.protocol.EmptyMBulkReply
+import com.twitter.finagle.redis.protocol.IntegerReply
 
 /**
  * Author: chris
@@ -49,6 +55,28 @@ trait KeysOps { this: DbCommon =>
           updateAndReply(updated, IntegerReply(1))
         }
         case None => noUpdate(IntegerReply(0))
+      }
+    }
+  }
+
+  protected val evenBackslashes = """(?<!\\)(\\\\)*(?!\\)"""
+
+  def keys(pattern: String) = pool {
+    try {
+      val regex = pattern
+        .replaceAll(evenBackslashes + """\*""", ".*")
+        .replaceAll(evenBackslashes + """\?""", ".")
+        .r
+      state.read { m =>
+        val matchingKeys = m.keys.filter(regex.unapplySeq(_).isDefined).map(_.getBytes).toList
+        matchingKeys match {
+          case Nil => EmptyMBulkReply()
+          case ks => MBulkReply(ks)
+        }
+      }
+    } catch {
+      case e: PatternSyntaxException => {
+        EmptyMBulkReply()
       }
     }
   }

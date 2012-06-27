@@ -20,4 +20,5 @@ trait DbTestUtils {
     })
   }
 
+  def decodeMBulkReply(reply: MBulkReply) = reply.messages.map(new String(_))
 }
