@@ -110,6 +110,27 @@ class StringsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     db.getBit("foo", 15).get should equal(IntegerReply(1))
   }
 
+  behavior of "GETSET"
+
+  it should "return an error if the value is not a string" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.hset("foo", "field1".getBytes, "abc".getBytes)
+    db.getSet("foo", "abc".getBytes).get should equal(Replies.errWrongType)
+  }
+
+  it should "set the value and return nil if the key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.getSet("foo", "abc".getBytes).get should equal(EmptyBulkReply())
+    db.get("foo").get.asInstanceOf[BulkReply].message should equal("abc".getBytes)
+  }
+
+  it should "set the value and return the old value if the key exists" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "old".getBytes)
+    db.getSet("foo", "new".getBytes).get.asInstanceOf[BulkReply].message should equal("old".getBytes)
+    db.get("foo").get.asInstanceOf[BulkReply].message should equal("new".getBytes)
+  }
+
   behavior of "INCRBY"
 
   it should "return an error if the value is not a string" in {

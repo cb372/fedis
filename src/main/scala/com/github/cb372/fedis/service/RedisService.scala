@@ -44,6 +44,7 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case decrby: DecrBy => db.decrBy(decrby.key, decrby.amount)
       case Get(key) => db.get(key)
       case GetBit(key, offset) => db.getBit(key, offset)
+      case GetSet(key, value) => db.getSet(key, value)
       case Incr(key) => db.incr(key)
       case incrby: IncrBy => db.incrBy(incrby.key, incrby.amount) // IncrBy is not a case class :(
       case MGet(keys) => db.mget(keys)
@@ -54,7 +55,7 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case SetNx(key, value) => db.setNx(key, value)
       case Strlen(key) => db.strlen(key)
       /*
-       * TODO GetRange, GetSet, MSetNx, SetRange
+       * TODO GetRange, MSetNx, SetRange
        */
 
         /*

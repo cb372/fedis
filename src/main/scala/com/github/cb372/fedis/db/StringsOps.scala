@@ -11,7 +11,6 @@ import com.twitter.conversions.time._
 
 trait StringsOps { this: DbCommon =>
 
-
   def append(key: String, suffix: Array[Byte]) = pool {
     state.update { m =>
       m get(key) match {
@@ -60,6 +59,22 @@ trait StringsOps { this: DbCommon =>
         }
         case Some(_) => Replies.errWrongType
         case None => IntegerReply(0)
+      }
+    }
+  }
+
+  def getSet(key: String, newValue: Array[Byte]) = pool {
+    state.update { m =>
+      m get(key) match {
+        case Some(Entry(RString(oldValue), expiry)) => {
+          val updated = m + (key -> Entry(RString(newValue), expiry)) // copy expiry
+          updateAndReply(updated, BulkReply(oldValue))
+        }
+        case Some(_) => noUpdate(Replies.errWrongType)
+        case None => {
+          val updated = m + (key -> Entry(RString(newValue))) // no expiry
+          updateAndReply(updated, EmptyBulkReply())
+        }
       }
     }
   }
