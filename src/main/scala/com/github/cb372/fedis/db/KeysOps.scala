@@ -109,6 +109,22 @@ trait KeysOps { this: DbCommon =>
     }
   }
 
+  def rename(key: String, newKey: String) = pool {
+    if (key == newKey)
+      Replies.errSourceAndDestEqual
+    else {
+      state.update { m =>
+        m get(key) map {
+          case entry => {
+            // remove old key, add newKey -> entry
+            val updated = (m - key) + (newKey -> entry)
+            updateAndReply(updated, Replies.ok)
+          }
+        } getOrElse noUpdate(Replies.errNoSuchKey)
+      }
+    }
+  }
+
   def ttl(key: String) = pool {
     state.read { m =>
       m get(key) flatMap {

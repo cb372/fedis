@@ -31,10 +31,11 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case Keys(pattern) => db.keys(pattern)
       case Persist(key) => db.persist(key)
       case Randomkey() => db.randomKey()
+      case Rename(key, newKey) => db.rename(key, newKey)
       case Ttl(key) => db.ttl(key)
       case Type(key) => db.taipu(key)
         /*
-         * TODO Rename, RenameNx
+         * TODO RenameNx
          */
 
         /*

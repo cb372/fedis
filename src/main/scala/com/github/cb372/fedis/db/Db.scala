@@ -23,6 +23,8 @@ object Replies {
   val errIntOverflow = ErrorReply("ERR increment or decrement would overflow")
   val errNotAnInt = ErrorReply("ERR value is not an integer or out of range")
   val errNotABit = ErrorReply("ERR bit is not an integer or out of range")
+  val errNoSuchKey = ErrorReply("ERR no such key")
+  val errSourceAndDestEqual = ErrorReply("ERR source and destination objects are the same")
 
   def errWrongNumArgs(cmdName: String) =
     ErrorReply("ERR wrong number of arguments for '%s' command".format(cmdName.toLowerCase))

@@ -211,6 +211,37 @@ class KeysSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     key should (equal("foo") or equal("bar") or equal("baz"))
   }
 
+  behavior of "RENAME"
+
+  it should "return an error if the key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.rename("foo", "bar").get
+    reply should equal(Replies.errNoSuchKey)
+  }
+
+  it should "return an error if the old and new keys are the same (key does not exist)" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.rename("foo", "foo").get
+    reply should equal(Replies.errSourceAndDestEqual)
+  }
+
+  it should "return an error if the old and new keys are the same (key exists)" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "avc".getBytes)
+    val reply = db.rename("foo", "foo").get
+    reply should equal(Replies.errSourceAndDestEqual)
+  }
+
+  it should "rename the given key" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    val reply = db.rename("foo", "bar").get
+    reply should equal(Replies.ok)
+
+    db.get("foo").get should equal(EmptyBulkReply())
+    db.get("bar").get.asInstanceOf[BulkReply].message should equal("abc".getBytes)
+  }
+
   behavior of "TTL"
 
   it should "return -1 if the key does not exist" in {
