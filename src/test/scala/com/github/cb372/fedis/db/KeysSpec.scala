@@ -242,6 +242,48 @@ class KeysSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     db.get("bar").get.asInstanceOf[BulkReply].message should equal("abc".getBytes)
   }
 
+  behavior of "RENAMENX"
+
+  it should "return an error if the key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.renameNx("foo", "bar").get
+    reply should equal(Replies.errNoSuchKey)
+  }
+
+  it should "return an error if the old and new keys are the same (key does not exist)" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.renameNx("foo", "foo").get
+    reply should equal(Replies.errSourceAndDestEqual)
+  }
+
+  it should "return an error if the old and new keys are the same (key exists)" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "avc".getBytes)
+    val reply = db.renameNx("foo", "foo").get
+    reply should equal(Replies.errSourceAndDestEqual)
+  }
+
+  it should "rename the given key if the new key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    val reply = db.renameNx("foo", "bar").get
+    reply should equal(IntegerReply(1))
+
+    db.get("foo").get should equal(EmptyBulkReply())
+    db.get("bar").get.asInstanceOf[BulkReply].message should equal("abc".getBytes)
+  }
+
+  it should "do nothing if the new key already exists" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.set("bar", "def".getBytes)
+    val reply = db.renameNx("foo", "bar").get
+    reply should equal(IntegerReply(0))
+
+    db.get("foo").get.asInstanceOf[BulkReply].message should equal("abc".getBytes)
+    db.get("bar").get.asInstanceOf[BulkReply].message should equal("def".getBytes)
+  }
+
   behavior of "TTL"
 
   it should "return -1 if the key does not exist" in {

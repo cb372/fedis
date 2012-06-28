@@ -125,6 +125,27 @@ trait KeysOps { this: DbCommon =>
     }
   }
 
+  def renameNx(key: String, newKey: String) = pool {
+    if (key == newKey)
+      Replies.errSourceAndDestEqual
+    else {
+      state.update { m =>
+        (m.get(key), m.get(newKey)) match {
+          case (Some(entry), None) => {
+            // remove old key, add newKey -> entry
+            val updated = (m - key) + (newKey -> entry)
+            updateAndReply(updated, IntegerReply(1))
+          }
+          case (Some(_), Some(_)) => {
+            // newKey already exists, do nothing
+            noUpdate(IntegerReply(0))
+          }
+          case (None, _) => noUpdate(Replies.errNoSuchKey)
+        }
+      }
+    }
+  }
+
   def ttl(key: String) = pool {
     state.read { m =>
       m get(key) flatMap {
