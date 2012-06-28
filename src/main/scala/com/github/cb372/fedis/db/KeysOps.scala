@@ -122,4 +122,15 @@ trait KeysOps { this: DbCommon =>
     }
   }
 
+  def taipu(key: String) = pool {
+    state.read { m =>
+      m get(key) match {
+        case None => StatusReply("none")
+        case Some(Entry(RString(_), _)) => StatusReply("string")
+        case Some(Entry(RHash(_), _)) => StatusReply("hash")
+        case _ => StatusReply("wibble")
+      }
+    }
+  }
+
 }

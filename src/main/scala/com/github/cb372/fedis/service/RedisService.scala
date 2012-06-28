@@ -32,6 +32,10 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case Persist(key) => db.persist(key)
       case Randomkey() => db.randomKey()
       case Ttl(key) => db.ttl(key)
+      case Type(key) => db.taipu(key)
+        /*
+         * TODO Rename, RenameNx
+         */
 
         /*
          * Strings
@@ -50,6 +54,9 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case SetEx(key, seconds, value) => db.setEx(key, seconds, value)
       case SetNx(key, value) => db.setNx(key, value)
       case Strlen(key) => db.strlen(key)
+      /*
+       * TODO GetRange, GetSet, MSetNx, SetRange
+       */
 
         /*
          * Hashes
@@ -58,6 +65,9 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case HGet(key, field) => db.hget(new String(key), field)
       case HGetAll(key) => db.hgetAll(new String(key))
       case HSet(key, field, value) => db.hset(new String(key), field, value)
+      /*
+       * TODO HMGet
+       */
 
       case _ => Future.exception(ServerError("Not implemented"))
     }

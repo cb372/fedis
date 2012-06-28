@@ -238,4 +238,50 @@ class KeysSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     }
   }
 
+  behavior of "TYPE"
+
+  it should "return 'none' if key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.taipu("foo").get
+    reply should equal(StatusReply("none"))
+  }
+
+  it should "return 'string' if value is a string" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    val reply = db.taipu("foo").get
+    reply should equal(StatusReply("string"))
+  }
+
+  it should "return 'hash' if value is a hash" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.hset("foo", "abc".getBytes, "def".getBytes)
+    val reply = db.taipu("foo").get
+    reply should equal(StatusReply("hash"))
+  }
+
+  /*
+   * Not implemented
+   *
+  it should "return 'list' if value is a list" in {
+    val db = new Db(FuturePool.immediatePool)
+    // lpush("foo", ...
+    val reply = db.taipu("foo").get
+    reply should equal(StatusReply("list"))
+  }
+
+  it should "return 'set' if value is a set" in {
+    val db = new Db(FuturePool.immediatePool)
+    // sadd("foo", ...
+    val reply = db.taipu("foo").get
+    reply should equal(StatusReply("set"))
+  }
+
+  it should "return 'zset' if value is a sorted set" in {
+    val db = new Db(FuturePool.immediatePool)
+    // zadd("foo", ...
+    val reply = db.taipu("foo").get
+    reply should equal(StatusReply("zset"))
+  }
+  */
 }
