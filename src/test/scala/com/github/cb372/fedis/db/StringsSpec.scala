@@ -219,6 +219,30 @@ class StringsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     db.get("b").get.asInstanceOf[BulkReply].message should equal("2".getBytes)
   }
 
+  behavior of "MSETNX"
+
+  it should "not allow an empty map" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.msetNx(Map()).get should equal(ErrorReply("ERR wrong number of arguments for 'msetnx' command"))
+  }
+
+  it should "set all keys to their corresponding values, if none already exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    val reply = db.msetNx(Map("a" -> "1".getBytes, "b" -> "2".getBytes)).get
+    reply should equal(IntegerReply(1))
+    db.get("a").get.asInstanceOf[BulkReply].message should equal("1".getBytes)
+    db.get("b").get.asInstanceOf[BulkReply].message should equal("2".getBytes)
+  }
+
+  it should "do nothing if any key already exists" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("a", "old1".getBytes)
+    val reply = db.msetNx(Map("a" -> "1".getBytes, "b" -> "2".getBytes)).get
+    reply should equal(IntegerReply(0))
+    db.get("a").get.asInstanceOf[BulkReply].message should equal("old1".getBytes)
+    db.get("b").get should equal(EmptyBulkReply())
+  }
+
   behavior of "SET"
 
   it should "overwrite an existing value of any type" in {

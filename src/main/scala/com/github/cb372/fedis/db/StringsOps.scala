@@ -141,6 +141,23 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
+  def msetNx(kv: Map[String, Array[Byte]]) = pool {
+    if (kv.isEmpty)
+      Replies.errWrongNumArgs("msetnx")
+    else state.update { m =>
+      val existing = kv.keys.count(m.contains(_))
+      if (existing == 0) {
+        val updated = kv.foldLeft(m){
+          case (map, (key, value)) => map + (key -> Entry(RString(value))) // no expiry (clear any existing expiry)
+        }
+        updateAndReply(updated, IntegerReply(1))
+      } else
+        noUpdate(IntegerReply(0))
+    }
+  }
+
+
+
   def set(key: String, value: Array[Byte]) = pool {
     state.update { m =>
       val updated = m + (key -> Entry(RString(value))) // no expiry (clear any existing expiry)
