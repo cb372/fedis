@@ -65,10 +65,8 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case HDel(key, fields) => db.hdel(key, fields)
       case HGet(key, field) => db.hget(new String(key), field)
       case HGetAll(key) => db.hgetAll(new String(key))
+      case HMGet(key, fields) => db.hmget(key, fields)
       case HSet(key, field, value) => db.hset(new String(key), field, value)
-      /*
-       * TODO HMGet
-       */
 
       case _ => Future.exception(ServerError("Not implemented"))
     }

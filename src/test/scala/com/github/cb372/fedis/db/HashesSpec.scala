@@ -10,7 +10,7 @@ import com.twitter.util.{Time, FuturePool}
  * Created: 6/2/12
  */
 
-class HashesSpec extends FlatSpec with ShouldMatchers {
+class HashesSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
 
   behavior of "HDEL"
 
@@ -128,6 +128,43 @@ class HashesSpec extends FlatSpec with ShouldMatchers {
     db.hset("foo", "baz".getBytes, "b".getBytes)
 
     db.hlen("foo").get should equal(IntegerReply(2))
+  }
+
+  behavior of "HMGET"
+
+  it should "return an error if the value is not a hash" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+
+    db.hmget("foo", Seq("bar")).get should equal(Replies.errWrongType)
+  }
+
+  it should "return an error if no fields are specified" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+
+    db.hmget("foo", Seq()).get should equal(ErrorReply("ERR wrong number of arguments for 'hmget' command"))
+  }
+
+  it should "return empty byte arrays for all fields if key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    val values = decodeMBulkReply(db.hmget("foo", Seq("a", "b")).get.asInstanceOf[MBulkReply])
+
+    values should have length (2)
+    values(0) should have length (0)
+    values(1) should have length (0)
+  }
+
+  it should "return the specified fields" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.hset("foo", "a".getBytes(), "123".getBytes)
+    db.hset("foo", "c".getBytes(), "456".getBytes)
+    val values = decodeMBulkReply(db.hmget("foo", Seq("a", "b", "c")).get.asInstanceOf[MBulkReply])
+
+    values should have length (3)
+    values(0) should equal("123")
+    values(1) should have length (0)
+    values(2) should equal("456")
   }
 
   behavior of "HSET"

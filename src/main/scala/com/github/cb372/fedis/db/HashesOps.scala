@@ -1,6 +1,7 @@
 package com.github.cb372.fedis.db
 
 import com.twitter.finagle.redis.protocol._
+import javax.management.remote.rmi._RMIConnection_Stub
 
 /**
  * Author: chris
@@ -68,6 +69,23 @@ trait HashesOps { this: DbCommon =>
         case Some(Entry(RHash(hash), _)) => IntegerReply(hash.size)
         case Some(_) => Replies.errWrongType
         case None => IntegerReply(0)
+      }
+    }
+  }
+
+  def hmget(key: String, fields: Seq[String]) = pool {
+    if (fields.isEmpty)
+      Replies.errWrongNumArgs("hmget")
+    else {
+      state.read { m =>
+        m get(key) match {
+          case Some(Entry(RHash(hash), _)) => {
+            val values = fields.map(f => hash.get(HashKey(f.getBytes)).getOrElse(DbConstants.nil))
+            MBulkReply(values.toList)
+          }
+          case Some(_) => Replies.errWrongType
+          case None => MBulkReply(List.fill(fields.size)(DbConstants.nil))
+        }
       }
     }
   }
