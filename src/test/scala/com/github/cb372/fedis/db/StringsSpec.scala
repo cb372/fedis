@@ -110,6 +110,90 @@ class StringsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     db.getBit("foo", 15).get should equal(IntegerReply(1))
   }
 
+  behavior of "GETRANGE"
+
+  it should "return an error if the value is not a string" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.hset("foo", "field1".getBytes, "abc".getBytes)
+    db.getRange("foo", 1, 2).get should equal(Replies.errWrongType)
+  }
+
+  /*
+   * I think the 3 commented out tests are actually correct.
+   * Server should return "" (empty string) rather than nil.
+   * But finagle-redis does not allow this.
+   */
+
+  it should "return nil if key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.getRange("foo", 1, 2).get should equal(EmptyBulkReply())
+  }
+
+  it should "return nil if start is beyond the string's length" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    db.getRange("foo", 4, 10).get should equal(EmptyBulkReply())
+  }
+
+  it should "return nil string if end < start" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "hello world".getBytes)
+    db.getRange("foo", 4, 1).get should equal(EmptyBulkReply())
+  }
+//
+//  it should "return empty string if key does not exist" in {
+//    val db = new Db(FuturePool.immediatePool)
+//    db.getRange("foo", 1, 2).get.asInstanceOf[BulkReply].message should equal("".getBytes)
+//  }
+//
+//  it should "return empty string if start is beyond the string's length" in {
+//    val db = new Db(FuturePool.immediatePool)
+//    db.set("foo", "abc".getBytes)
+//    db.getRange("foo", 4, 10).get.asInstanceOf[BulkReply].message should equal("".getBytes)
+//  }
+//
+//  it should "return empty string if end < start" in {
+//    val db = new Db(FuturePool.immediatePool)
+//    db.set("foo", "hello world".getBytes)
+//    db.getRange("foo", 4, 1).get.asInstanceOf[BulkReply].message should equal("".getBytes)
+//  }
+
+  it should "return one char if end == start" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "hello world".getBytes)
+    db.getRange("foo", 6, 6).get.asInstanceOf[BulkReply].message should equal("w".getBytes)
+  }
+
+  it should "return the correct substring (start and end are both positive)" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "hello world".getBytes)
+    db.getRange("foo", 4, 6).get.asInstanceOf[BulkReply].message should equal("o w".getBytes)
+  }
+
+  it should "return the correct substring (start and end are both negative)" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "hello world".getBytes)
+    db.getRange("foo", -5, -2).get.asInstanceOf[BulkReply].message should equal("worl".getBytes)
+  }
+
+  it should "return the correct substring (start is negative, end is positive)" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "hello world".getBytes)
+    db.getRange("foo", -5, 7).get.asInstanceOf[BulkReply].message should equal("wo".getBytes)
+  }
+
+  it should "truncate positive index to end of string" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "hello world".getBytes)
+    db.getRange("foo", 4, 100).get.asInstanceOf[BulkReply].message should equal("o world".getBytes)
+  }
+
+  it should "truncate negative index to start of string" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "hello world".getBytes)
+    db.getRange("foo", -100, 4).get.asInstanceOf[BulkReply].message should equal("hello".getBytes)
+  }
+
   behavior of "GETSET"
 
   it should "return an error if the value is not a string" in {

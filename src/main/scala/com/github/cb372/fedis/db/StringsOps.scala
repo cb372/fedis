@@ -64,6 +64,31 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
+  def getRange(key: String, start: Int, end: Int) = pool {
+    state.read { m =>
+      m get(key) match {
+        case Some(Entry(RString(value), _)) => {
+          val from = positiveIndex(start, value.length)
+          val to = positiveIndex(end, value.length)
+          val substr = value.slice(from, to + 1)
+          if (substr.isEmpty)
+            EmptyBulkReply()
+          else
+            BulkReply(substr.toArray)
+        }
+        case Some(_) => Replies.errWrongType
+        case None => EmptyBulkReply()
+      }
+    }
+  }
+
+  private def positiveIndex(index: Int, len: Int): Int =
+    if (index < 0)
+      (len + index)
+    else
+      index
+
+
   def getSet(key: String, newValue: Array[Byte]) = pool {
     state.update { m =>
       m get(key) match {
