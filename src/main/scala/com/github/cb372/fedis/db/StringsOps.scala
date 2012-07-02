@@ -3,6 +3,7 @@ package com.github.cb372.fedis.db
 import com.twitter.finagle.redis.protocol.{MBulkReply, EmptyBulkReply, BulkReply, IntegerReply}
 import com.twitter.util.Time
 import com.twitter.conversions.time._
+import collection.immutable.IndexedSeq
 
 /**
  * Author: chris
@@ -36,7 +37,7 @@ trait StringsOps { this: DbCommon =>
   def get(key: String) = pool {
     state.read { m =>
       m get(key) match {
-        case Some(Entry(RString(value), _)) => BulkReply(value)
+        case Some(Entry(RString(value), _)) => BulkReply(value.toArray)
         case Some(_) => Replies.errWrongType
         case None => EmptyBulkReply()
       }
@@ -68,7 +69,7 @@ trait StringsOps { this: DbCommon =>
       m get(key) match {
         case Some(Entry(RString(oldValue), expiry)) => {
           val updated = m + (key -> Entry(RString(newValue), expiry)) // copy expiry
-          updateAndReply(updated, BulkReply(oldValue))
+          updateAndReply(updated, BulkReply(oldValue.toArray))
         }
         case Some(_) => noUpdate(Replies.errWrongType)
         case None => {
@@ -85,12 +86,12 @@ trait StringsOps { this: DbCommon =>
     state.update { m =>
       m get(key) match {
         case Some(Entry(RString(value), expiry)) => {
-          val stringVal = new String(value)
+          val stringVal = new String(value.toArray)
           try {
             val intVal = stringVal.toInt
             val incremented = intVal + amount
             if (overflowCheck(intVal, amount, incremented)) {
-              val updated = m + (key -> Entry(RString(String.valueOf(incremented).getBytes), expiry)) // copy expiry
+              val updated = m + (key -> Entry(RString(String.valueOf(incremented)), expiry)) // copy expiry
               updateAndReply(updated, IntegerReply(incremented))
             } else
               noUpdate(Replies.errIntOverflow)
@@ -124,7 +125,7 @@ trait StringsOps { this: DbCommon =>
     keys match {
       case Nil => Replies.errWrongNumArgs("mget")
       case _ => state.read { m =>
-        val values = keys map(m.get(_).collect({case Entry(RString(value), _) => value }) getOrElse DbConstants.nil)
+        val values = keys map(m.get(_).collect({case Entry(RString(value), _) => value.toArray }) getOrElse DbConstants.nil)
         MBulkReply(values)
       }
     }
@@ -160,58 +161,63 @@ trait StringsOps { this: DbCommon =>
 
   def set(key: String, value: Array[Byte]) = pool {
     state.update { m =>
-      val updated = m + (key -> Entry(RString(value))) // no expiry (clear any existing expiry)
+      val updated = m + (key -> Entry(RString((value)))) // no expiry (clear any existing expiry)
       updateAndReply(updated, Replies.ok)
     }
   }
 
-  // TODO refactor this huge method
-  // XXX copy the whole array just to set one bit?!
   def setBit(key: String, offset: Int, value: Int) = pool {
     if (value != 0 && value != 1) {
       Replies.errNotABit
     } else state.update { m =>
       m get(key) match {
-        case Some(Entry(RString(array), expiry)) => {
-          if (offset >= array.length * 8) {
-            // extend the current value
-            val bytes = (offset / 8) + 1
-            val extendedArray: Array[Byte] = Array.fill(bytes)(DbConstants.zeroByte)
-            Array.copy(array, 0, extendedArray, 0, array.length)
-            if (value == 1) {
-              // set a 1 bit in the last byte
-              extendedArray(offset / 8) = (1 << (7 - (offset % 8))).toByte
-            }
-            val updated = m + (key -> Entry(RString(extendedArray), expiry)) // copy expiry
-            updateAndReply(updated, IntegerReply(0))
-          } else {
-            val oldByte: Byte = array(offset / 8)
-            val bitOffset: Int = 7 - (offset % 8)
-            val oldBit: Int = (oldByte & ( 1 << bitOffset )) >> bitOffset
-            val newByte: Byte = value match {
-              case 0 => (oldByte & ~(1 << bitOffset)).toByte
-              case 1 => (oldByte & (1 << bitOffset)).toByte
-            }
-            val newArray: Array[Byte] = new Array[Byte](array.length)
-            Array.copy(array, 0, newArray, 0, array.length)
-            newArray(offset / 8) = newByte
-            val updated = m + (key -> Entry(RString(newArray), expiry)) // copy expiry
-            updateAndReply(updated, IntegerReply(oldBit))
-          }
+        case Some(Entry(RString(oldValue), expiry)) => {
+          val (newValue, oldBit) = doSetBit(oldValue, offset, value)
+          val updated = m + (key -> Entry(RString(newValue), expiry)) // copy expiry
+          updateAndReply(updated, IntegerReply(oldBit))
         }
         case Some(_) => noUpdate(Replies.errWrongType)
         case None => {
-          val bytes = (offset / 8) + 1
-          val byteArray: Array[Byte] = Array.fill(bytes)(DbConstants.zeroByte)
+          val numBytes = (offset / 8) + 1
+          var seq = IndexedSeq.fill(numBytes)(DbConstants.zeroByte)
           if (value == 1) {
             // set a 1 bit in the last byte
-            byteArray(offset / 8) = (1 << (7 - (offset % 8))).toByte
+            seq = seq.updated(offset / 8, (1 << (7 - (offset % 8))).toByte)
           }
-          val updated = m + (key -> Entry(RString(byteArray))) // no expiry
+          val updated = m + (key -> Entry(RString(seq))) // no expiry
           updateAndReply(updated, IntegerReply(0))
         }
       }
     }
+  }
+
+  private def doSetBit(
+                        seq: IndexedSeq[Byte],
+                        offset: Int,
+                        bit: Int
+                        ): (IndexedSeq[Byte], Int) = {
+    // pad the existing vector if necessary
+    val padded =
+      if (offset >= seq.length * 8)
+        seq.padTo((offset / 8) + 1, DbConstants.zeroByte)
+      else
+        seq
+
+    // find the appropriate byte
+    val oldByte: Byte = padded(offset / 8)
+    // find the appropriate bit in that byte
+    val bitOffset: Int = 7 - (offset % 8)
+    // get the old value of the bit
+    val oldBit: Int = (oldByte & ( 1 << bitOffset )) >> bitOffset
+    // update the byte
+    val newByte: Byte = bit match {
+      case 0 => (oldByte & ~(1 << bitOffset)).toByte
+      case 1 => (oldByte | (1 << bitOffset)).toByte
+    }
+    // update the vector
+    val newSeq = padded.updated(offset / 8, newByte)
+
+    (newSeq, oldBit)
   }
 
   def setEx(key: String, expireAfter: Long, value: Array[Byte]) = pool {

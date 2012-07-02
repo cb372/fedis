@@ -51,7 +51,8 @@ class RedisServiceSpec extends FlatSpec with ShouldMatchers {
       SessionAndCommand(Session(false, 2), Get("foo"))
     )
 
-    getInDb1.get should equal(BulkReply(value))
+    val db1Val = new String(getInDb1.get.asInstanceOf[BulkReply].message)
+    db1Val should equal("abc")
     getInDb2.get should equal(EmptyBulkReply())
   }
 }

@@ -1,5 +1,7 @@
 package com.github.cb372.fedis.db
 
+import collection.immutable
+
 /**
  * Author: chris
  * Created: 6/11/12
@@ -7,7 +9,13 @@ package com.github.cb372.fedis.db
 
 sealed trait RVal
 
-case class RString(bytes: Array[Byte]) extends RVal
+case class RString(bytes: immutable.IndexedSeq[Byte]) extends RVal
+
+object RString {
+  def apply(string: String): RString = apply(string.getBytes)
+
+  def apply(bytesArray: Array[Byte]): RString = RString(bytesArray.toIndexedSeq)
+}
 
 case class RHash(hash: Map[HashKey, Array[Byte]]) extends RVal
 
