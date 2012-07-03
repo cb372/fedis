@@ -29,3 +29,4 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "1.7.2" % "test"
 
 scalacOptions += "-unchecked"
 
+publishTo := Some(Resolver.file("file",  new File( "../cb372.github.com/m2/releases" )) )
