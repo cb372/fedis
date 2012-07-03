@@ -264,6 +264,35 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
+  def setRange(key: String, offset: Int, substr: Array[Byte]) = pool {
+    if (offset < 0)
+      Replies.errOffsetOutOfRange
+    else
+      state.update { m =>
+        m get(key) match {
+          case Some(Entry(RString(value), expiry)) => {
+            val newLen = (offset + substr.length) max value.length
+            val padded =
+              if (newLen > value.length)
+                value.padTo(newLen, DbConstants.zeroByte)
+              else
+                value
+            val newValue: IndexedSeq[Byte] = substr.foldLeft((padded, offset)) {
+              case ((string, i), b) => (string.updated(i, b), i + 1)
+            }._1
+            val updated = m + (key -> Entry(RString(newValue), expiry)) // copy expiry
+            updateAndReply(updated, IntegerReply(newLen))
+          }
+          case Some(_) => noUpdate(Replies.errWrongType)
+          case None => {
+            val zeroPadded = IndexedSeq.fill(offset)(DbConstants.zeroByte) ++ substr.toIndexedSeq
+            val updated = m + (key -> Entry(RString(zeroPadded))) // no expiry
+            updateAndReply(updated, IntegerReply(zeroPadded.length))
+          }
+        }
+      }
+  }
+
   def strlen(key: String) = pool {
     state.read { m =>
       m get(key) match {

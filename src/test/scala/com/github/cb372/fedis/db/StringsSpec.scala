@@ -431,6 +431,44 @@ class StringsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     db.hget("foo", "abc".getBytes).get.asInstanceOf[BulkReply].message should equal("def".getBytes)
   }
 
+  behavior of "SETRANGE"
+
+  it should "return an error if the value is not a string" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.hset("foo", "field1".getBytes, "abc".getBytes)
+    db.setRange("foo", 10, "abc".getBytes).get should equal(Replies.errWrongType)
+  }
+
+  it should "return an error if the offset is negative" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.setRange("foo", -1, "abc".getBytes).get should equal(Replies.errOffsetOutOfRange)
+  }
+
+  it should "create the key if it does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    val substr = "abc".getBytes
+    db.setRange("foo", 5, substr).get should equal(IntegerReply(5 + substr.length))
+    val value = db.get("foo").get.asInstanceOf[BulkReply].message
+    value should equal(Array[Byte](0,0,0,0,0,'a'.toByte,'b'.toByte,'c'.toByte))
+  }
+
+  it should "extend the value if necessary" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "abc".getBytes)
+    val substr = "abc".getBytes
+    db.setRange("foo", 5, substr).get should equal(IntegerReply(5 + substr.length))
+    val value = db.get("foo").get.asInstanceOf[BulkReply].message
+    value should equal(Array[Byte]('a'.toByte,'b'.toByte,'c'.toByte,0,0,'a'.toByte,'b'.toByte,'c'.toByte))
+  }
+
+  it should "overwrite from the given offset" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set("foo", "hello world".getBytes)
+    db.setRange("foo", 6, "abc".getBytes).get should equal(IntegerReply(11))
+    val value = new String(db.get("foo").get.asInstanceOf[BulkReply].message)
+    value should equal("hello abcld")
+  }
+
   behavior of "STRLEN"
 
   it should "return an error if the value is not a string" in {

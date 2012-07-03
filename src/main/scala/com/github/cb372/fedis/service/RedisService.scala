@@ -55,10 +55,8 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case SetBit(key, offset, value) => db.setBit(key, offset, value)
       case SetEx(key, seconds, value) => db.setEx(key, seconds, value)
       case SetNx(key, value) => db.setNx(key, value)
+      case SetRange(key, offset, value) => db.setRange(key, offset, value)
       case Strlen(key) => db.strlen(key)
-      /*
-       * TODO SetRange
-       */
 
         /*
          * Hashes
