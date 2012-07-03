@@ -1,3 +1,5 @@
+organization := "com.github.cb372"
+
 name := "fedis"
 
 ideaProjectName := "fedis"
