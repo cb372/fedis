@@ -1,9 +1,8 @@
 package com.github.cb372.fedis.db
 
-import org.scalatest.FlatSpec
-import org.scalatest.matchers.ShouldMatchers
 import com.twitter.finagle.redis.protocol._
-import com.twitter.util.{Time, FuturePool}
+import com.twitter.util.Time
+import com.twitter.finagle.redis.util.ReplyFormat
 
 /**
  * Author: chris
@@ -20,5 +19,5 @@ trait DbTestUtils {
     })
   }
 
-  def decodeMBulkReply(reply: MBulkReply) = reply.messages.map(new String(_))
+  def decodeMBulkReply(reply: MBulkReply): List[String] = ReplyFormat.toString(reply.messages)
 }

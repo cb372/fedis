@@ -58,7 +58,7 @@ class StringsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
 
   it should "not allow integer overflow" in {
     val db = new Db(FuturePool.immediatePool)
-    db.set("foo", (Int.MinValue + 10).toString.getBytes)
+    db.set("foo", (Long.MinValue + 10).toString.getBytes)
     db.decrBy("foo", 11).get should equal(Replies.errIntOverflow)
   }
 
@@ -237,7 +237,7 @@ class StringsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
 
   it should "not allow integer overflow" in {
     val db = new Db(FuturePool.immediatePool)
-    db.set("foo", (Int.MaxValue - 10).toString.getBytes)
+    db.set("foo", (Long.MaxValue - 10).toString.getBytes)
     db.incrBy("foo", 11).get should equal(Replies.errIntOverflow)
   }
 
@@ -250,7 +250,7 @@ class StringsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
 
   it should "return empty byte arrays for non-existent keys" in {
     val db = new Db(FuturePool.immediatePool)
-    val values = db.mget(List("foo", "bar")).get.asInstanceOf[MBulkReply].messages
+    val values = decodeMBulkReply(db.mget(List("foo", "bar")).get.asInstanceOf[MBulkReply])
     values should have length (2)
     values(0) should have length (0)
     values(1) should have length (0)
@@ -260,10 +260,10 @@ class StringsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     val db = new Db(FuturePool.immediatePool)
     db.set("foo", "abc".getBytes)
     db.set("bar", "def".getBytes)
-    val values = db.mget(List("foo", "bar")).get.asInstanceOf[MBulkReply].messages
+    val values = decodeMBulkReply(db.mget(List("foo", "bar")).get.asInstanceOf[MBulkReply])
     values should have length (2)
-    values(0) should equal("abc".getBytes)
-    values(1) should equal("def".getBytes)
+    values(0) should equal("abc")
+    values(1) should equal("def")
   }
 
   it should "return empty byte arrays for keys with non-string values" in {
@@ -271,11 +271,11 @@ class StringsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     db.set("foo", "abc".getBytes)
     db.hset("bar", "fieldKey".getBytes, "fieldValue".getBytes)
     db.set("baz", "def".getBytes)
-    val values = db.mget(List("foo", "bar", "baz")).get.asInstanceOf[MBulkReply].messages
+    val values = decodeMBulkReply(db.mget(List("foo", "bar", "baz")).get.asInstanceOf[MBulkReply])
     values should have length (3)
-    values(0) should equal("abc".getBytes)
+    values(0) should equal("abc")
     values(1) should have length (0)
-    values(2) should equal("def".getBytes)
+    values(2) should equal("def")
   }
 
   behavior of "MSET"

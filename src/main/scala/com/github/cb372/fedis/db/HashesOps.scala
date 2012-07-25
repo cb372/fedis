@@ -51,8 +51,10 @@ trait HashesOps { this: DbCommon =>
     state.read { m =>
       m get(key) match {
         case Some(Entry(RHash(hash), _)) => {
-          val list = hash.flatMap({case (k, v) => List(k.array, v)}).toList
-          MBulkReply(list)
+          val keyValuePairs = hash.flatMap {
+            case (k, v) => List(BulkReply(k.array), BulkReply(v))
+          }.toList
+          MBulkReply(keyValuePairs)
         }
         case Some(_) => Replies.errWrongType
         case None => EmptyMBulkReply()
@@ -80,11 +82,15 @@ trait HashesOps { this: DbCommon =>
       state.read { m =>
         m get(key) match {
           case Some(Entry(RHash(hash), _)) => {
-            val values = fields.map(f => hash.get(HashKey(f.getBytes)).getOrElse(DbConstants.nil))
-            MBulkReply(values.toList)
+            val values = fields.map {
+              f =>
+                val key = HashKey(f.getBytes)
+                hash.get(key).map(BulkReply(_)).getOrElse(EmptyBulkReply())
+            }.toList
+            MBulkReply(values)
           }
           case Some(_) => Replies.errWrongType
-          case None => MBulkReply(List.fill(fields.size)(DbConstants.nil))
+          case None => MBulkReply(List.fill(fields.size)(EmptyBulkReply()))
         }
       }
     }

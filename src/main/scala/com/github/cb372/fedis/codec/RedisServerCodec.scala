@@ -3,10 +3,11 @@ package codec
 
 import handler.ClientAddressInjector
 
-import com.twitter.naggati.{Codec => NaggatiCodec}
+import com.twitter.finagle.redis.naggati.{Codec => NaggatiCodec, Stage}
 import com.twitter.finagle.{Codec, ServerCodecConfig, CodecFactory}
 import com.twitter.finagle.redis.protocol.{ReplyCodec, CommandCodec, Reply}
 import org.jboss.netty.channel.{Channels, ChannelPipelineFactory}
+import com.twitter.finagle.redis.naggati.DontCareCounter
 
 
 object RedisServerCodec {
@@ -23,7 +24,14 @@ class RedisServerCodec extends CodecFactory[CmdFromClient, Reply]#Server {
           val commandCodec = new CommandCodec
           val replyCodec = new ReplyCodec
 
-          pipeline.addLast("codec", new NaggatiCodec(commandCodec.decode, replyCodec.encode))
+          pipeline.addLast("codec",
+            new NaggatiCodec(
+              commandCodec.decode,
+              replyCodec.encode,
+              DontCareCounter,
+              DontCareCounter)
+          )
+
           pipeline.addLast("clientAddr", new ClientAddressInjector)
 
           pipeline

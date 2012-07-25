@@ -30,9 +30,9 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
-  def decr(key: String) = incrBy(key, -1)
+  def decr(key: String) = incrBy(key, -1L)
 
-  def decrBy(key: String, amount: Int) = incrBy(key, -amount)
+  def decrBy(key: String, amount: Long) = incrBy(key, -amount)
 
   def get(key: String) = pool {
     state.read { m =>
@@ -105,17 +105,17 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
-  def incr(key: String) = incrBy(key, 1)
+  def incr(key: String) = incrBy(key, 1L)
 
-  def incrBy(key: String, amount: Int) = pool {
+  def incrBy(key: String, amount: Long) = pool {
     state.update { m =>
       m get(key) match {
         case Some(Entry(RString(value), expiry)) => {
           val stringVal = new String(value.toArray)
           try {
-            val intVal = stringVal.toInt
-            val incremented = intVal + amount
-            if (overflowCheck(intVal, amount, incremented)) {
+            val longVal = stringVal.toLong
+            val incremented = longVal + amount
+            if (overflowCheck(longVal, amount, incremented)) {
               val updated = m + (key -> Entry(RString(String.valueOf(incremented)), expiry)) // copy expiry
               updateAndReply(updated, IntegerReply(incremented))
             } else
@@ -139,7 +139,7 @@ trait StringsOps { this: DbCommon =>
   /*
    * Overflow checking, returns true if the addition did NOT cause an overflow
    */
-  private def overflowCheck(before: Int, added: Int, after: Int): Boolean = {
+  private def overflowCheck(before: Long, added: Long, after: Long): Boolean = {
     if (added >= 0)
       after > before
     else
@@ -150,7 +150,9 @@ trait StringsOps { this: DbCommon =>
     keys match {
       case Nil => Replies.errWrongNumArgs("mget")
       case _ => state.read { m =>
-        val values = keys map(m.get(_).collect({case Entry(RString(value), _) => value.toArray }) getOrElse DbConstants.nil)
+        val values = keys map { k =>
+          m.get(k).collect({case Entry(RString(value), _) => BulkReply(value.toArray)}) getOrElse EmptyBulkReply()
+        }
         MBulkReply(values)
       }
     }

@@ -68,7 +68,7 @@ trait KeysOps { this: DbCommon =>
         .replaceAll(evenBackslashes + """\?""", ".")
         .r
       state.read { m =>
-        val matchingKeys = m.keys.filter(regex.unapplySeq(_).isDefined).map(_.getBytes).toList
+        val matchingKeys = m.keys.filter(regex.unapplySeq(_).isDefined).map(s => BulkReply(s.getBytes)).toList
         matchingKeys match {
           case Nil => EmptyMBulkReply()
           case ks => MBulkReply(ks)

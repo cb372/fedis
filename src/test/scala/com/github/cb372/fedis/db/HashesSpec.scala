@@ -102,8 +102,8 @@ class HashesSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     val db = new Db(FuturePool.immediatePool)
     for ((k,v) <- myMap) db.hset("foo", k.getBytes, v.getBytes)
 
-    val list = db.hgetAll("foo").get.asInstanceOf[MBulkReply].messages
-    val resultMap = list.grouped(2).map(xs => (new String(xs(0)), new String(xs(1)))).toMap
+    val list = decodeMBulkReply(db.hgetAll("foo").get.asInstanceOf[MBulkReply])
+    val resultMap = list.grouped(2).map(xs => (xs(0), xs(1))).toMap
 
     resultMap should equal(myMap)
   }
