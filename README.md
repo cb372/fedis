@@ -32,8 +32,8 @@ Benefits:
 
         <dependency>
             <groupId>com.github.cb372</groupId>
-            <artifactId>fedis_2.9.1</artifactId>
-            <version>1.0.0</version>
+            <artifactId>fedis_2.9.2</artifactId>
+            <version>1.1.0</version>
         </dependency>
         
         <repository>
@@ -45,14 +45,12 @@ Benefits:
 * Using SBT:
 
         resolvers += "Chris Birchall's Maven repo" at "http://cb372.github.com/m2/releases"
-        libraryDependencies += "com.github.cb372" %% "fedis" % "1.0.0"
+        libraryDependencies += "com.github.cb372" %% "fedis" % "1.1.0"
 
 ## Supported commands
 
 See the [Wiki page](https://github.com/cb372/fedis/wiki/Supported-Redis-Commands).
 
 ## Restrictions
-
-* Redis supports 64 bit unsigned integers, but Fedis only supports 32 bit integers. (See [here](https://github.com/twitter/finagle/pull/87) for the reason.)
 
 * Performance: Don't expect the blazing speed of Redis!

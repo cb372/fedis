@@ -4,9 +4,11 @@ name := "fedis"
 
 ideaProjectName := "fedis"
 
-version := "1.0.0"
+version := "1.1.0"
 
-scalaVersion := "2.9.1"
+scalaVersion := "2.9.2"
+
+crossScalaVersions := Seq("2.9.0", "2.9.1", "2.9.2")
 
 resolvers += "Twitter Maven repo" at "http://maven.twttr.com/"
 
@@ -15,7 +17,7 @@ libraryDependencies ++= Seq(
     )
 
 libraryDependencies ++= Seq(
-    "net.debasishg" %% "redisclient" % "2.5" % "test",
+    "net.debasishg" % "redisclient_2.9.1" % "2.5" % "test",
     "ch.qos.logback" % "logback-classic" % "1.0.4" % "test"
     )
 
