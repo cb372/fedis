@@ -1,6 +1,6 @@
 # Fedis
 
-[![Build Status](https://travis-ci.org/[cb372]/[fedis].png)](https://travis-ci.org/[cb372]/[fedis])
+[![Build Status](https://travis-ci.org/cb372/fedis.png)](https://travis-ci.org/cb372/fedis)
 
 A mock [Redis](http://redis.io/) server built with [Finagle](https://github.com/twitter/finagle).
 
