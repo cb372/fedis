@@ -2,8 +2,7 @@ package com.github.cb372.fedis
 package db
 
 import com.twitter.finagle.redis.protocol._
-import com.twitter.util.{Time, FuturePool}
-import com.twitter.conversions.time._
+import com.twitter.util.FuturePool
 
 trait KeyValueStore {
   def iterator: Iterator[(String, Entry)]
@@ -36,9 +35,9 @@ trait DbCommon {
   protected val state: DbState
   protected val pool: FuturePool
 
-  protected def noUpdate[R <: Reply](reply: R): (Option[Map[String, Entry]], R) = (None, reply)
+  protected def noUpdate[R <: Reply](reply: R): (Option[DbContents], R) = (None, reply)
 
-  protected def updateAndReply[R <: Reply](updatedMap: Map[String, Entry], reply: R): (Option[Map[String, Entry]], R) =
+  protected def updateAndReply[R <: Reply](updatedMap: DbContents, reply: R): (Option[DbContents], R) =
     (Some(updatedMap), reply)
 
 }

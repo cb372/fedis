@@ -1,6 +1,7 @@
 package com.github.cb372.fedis.db
 
 import java.util.concurrent.atomic.AtomicReference
+import annotation.tailrec
 
 /**
  * Author: chris
@@ -15,7 +16,7 @@ trait DbState {
    * @tparam T result type
    * @return result of the reading function
    */
-  def read[T](f: Map[String, Entry] => T): T
+  def read[T](f: Reader[T]): T
 
   /**
    * Process an immutable snapshot of the DB state,
@@ -24,7 +25,7 @@ trait DbState {
    * @tparam T result type
    * @return result of the read-and-update function
    */
-  def update[T](f: Map[String, Entry] => (Option[Map[String, Entry]], T)): T
+  def update[T](f: Updater[T]): T
 
 }
 
@@ -34,13 +35,14 @@ trait DbState {
  * In case of contention, the losing writer simply retries until it succeeds.
  */
 class AtomicRefDbState extends DbState {
-  private val ref = new AtomicReference[Map[String, Entry]](Map())
+  private val ref = new AtomicReference[DbContents](Map())
 
-  def read[T](f: Map[String, Entry] => T): T = f(ref.get())
+  def read[T](f: Reader[T]): T = f(ref.get())
 
-  def update[T](f: Map[String, Entry] => (Option[Map[String, Entry]], T)): T = updateRec(f)
+  def update[T](f: Updater[T]): T = updateRec(f)
 
-  private def updateRec[T](f: Map[String, Entry] => (Option[Map[String, Entry]], T)): T = {
+  @tailrec
+  private def updateRec[T](f: Updater[T]): T = {
     val oldMap = ref.get()
     val (update, result) = f(oldMap)
     update match {
