@@ -1,30 +1,22 @@
 package com.github.cb372.fedis.db
 
 import com.twitter.finagle.redis.protocol._
-import javax.management.remote.rmi._RMIConnection_Stub
 
 /**
  * Author: chris
  * Created: 6/27/12
  */
 
-trait HashesOps { this: DbCommon =>
+trait HashesOps extends ReplyFactory {
+  this: DbCommon =>
 
-  /*
-  * Note: Redis hashes support arbitrary byte arrays for both
-  * field keys and values, but finagle-redis is inconsistent
-  * in their typing of field keys.
-  * They use String for some commands and Array[Byte] for others.
-  */
-
-  def hdel(key: String, fields: Seq[String]) = pool {
+  def hdel(key: RKey, fields: Seq[RKey]) = pool {
     state.update { m =>
       m get(key) match {
         case Some(Entry(RHash(hash), expiry)) => {
-          val fieldKeys = fields.map(s => HashKey(s.getBytes))
-          val deleteCount = fieldKeys.count(hash.contains(_))
+          val deleteCount = fields.count(hash.contains(_))
           if (deleteCount > 0) {
-            val newHash = hash -- fieldKeys
+            val newHash = hash -- fields
             val updated = m + (key -> Entry(RHash(newHash), expiry)) // copy expiry
             updateAndReply(updated, IntegerReply(deleteCount))
           } else
@@ -36,23 +28,23 @@ trait HashesOps { this: DbCommon =>
     }
   }
 
-  def hget(key: String, field: Array[Byte]) = pool {
+  def hget(key: RKey, field: RKey) = pool {
     state.read { m =>
       m get(key) match {
         case Some(Entry(RHash(hash), _)) =>
-          hash.get(HashKey(field)).map(BulkReply(_)) getOrElse(EmptyBulkReply())
+          hash.get(field).map(bulkReply(_)) getOrElse(EmptyBulkReply())
         case Some(_) => Replies.errWrongType
         case None => EmptyBulkReply()
       }
     }
   }
 
-  def hgetAll(key: String) = pool {
+  def hgetAll(key: RKey) = pool {
     state.read { m =>
       m get(key) match {
         case Some(Entry(RHash(hash), _)) => {
           val keyValuePairs = hash.flatMap {
-            case (k, v) => List(BulkReply(k.array), BulkReply(v))
+            case (k, v) => List(bulkReply(k.array), bulkReply(v))
           }.toList
           MBulkReply(keyValuePairs)
         }
@@ -65,7 +57,7 @@ trait HashesOps { this: DbCommon =>
   /*
    * D'oh! finagle-redis doesn't provide a protocol class for this command.
    */
-  def hlen(key: String) = pool {
+  def hlen(key: RKey) = pool {
     state.read { m =>
       m get(key) match {
         case Some(Entry(RHash(hash), _)) => IntegerReply(hash.size)
@@ -75,17 +67,15 @@ trait HashesOps { this: DbCommon =>
     }
   }
 
-  def hmget(key: String, fields: Seq[String]) = pool {
+  def hmget(key: RKey, fields: Seq[RKey]) = pool {
     if (fields.isEmpty)
       Replies.errWrongNumArgs("hmget")
     else {
       state.read { m =>
         m get(key) match {
           case Some(Entry(RHash(hash), _)) => {
-            val values = fields.map {
-              f =>
-                val key = HashKey(f.getBytes)
-                hash.get(key).map(BulkReply(_)).getOrElse(EmptyBulkReply())
+            val values = fields.map { f =>
+                hash.get(f).map(bulkReply(_)).getOrElse(EmptyBulkReply())
             }.toList
             MBulkReply(values)
           }
@@ -96,13 +86,12 @@ trait HashesOps { this: DbCommon =>
     }
   }
 
-  def hset(key: String, field: Array[Byte], value: Array[Byte]) = pool {
-    val hashKey = HashKey(field)
+  def hset(key: RKey, field: RKey, value: Array[Byte]) = pool {
     state.update { m =>
       m get(key) match {
         case Some(Entry(RHash(hash), expiry)) => {
-          val alreadyContainsField = hash.contains(hashKey)
-          val newHash = hash + (hashKey -> value)
+          val alreadyContainsField = hash.contains(field)
+          val newHash = hash + (field -> value)
           val reply =
             if (alreadyContainsField)
               IntegerReply(0)
@@ -113,7 +102,7 @@ trait HashesOps { this: DbCommon =>
         }
         case Some(_) => noUpdate(Replies.errWrongType)
         case None => {
-          val updated = m + (key -> Entry(RHash(Map(hashKey -> value))))
+          val updated = m + (key -> Entry(RHash(Map(field -> value))))
           updateAndReply(updated, IntegerReply(1))
         }
       }

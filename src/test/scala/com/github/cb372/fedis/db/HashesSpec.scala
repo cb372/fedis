@@ -3,7 +3,9 @@ package com.github.cb372.fedis.db
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers
 import com.twitter.finagle.redis.protocol._
-import com.twitter.util.{Time, FuturePool}
+import com.twitter.util.FuturePool
+
+import DbMatchers._
 
 /**
  * Author: chris
@@ -16,37 +18,37 @@ class HashesSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
 
   it should "return an error if the value is not a hash" in {
     val db = new Db(FuturePool.immediatePool)
-    db.set("foo", "abc".getBytes)
+    db.set(rkey("foo"), "abc".getBytes)
 
-    db.hdel("foo", Seq("bar")).get should equal(Replies.errWrongType)
+    db.hdel(rkey("foo"), rkeys("bar")).get should equal(Replies.errWrongType)
   }
 
   it should "return 0 if the key does not exist" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hdel("foo", Seq("bar", "baz")).get should equal(IntegerReply(0))
+    db.hdel(rkey("foo"), rkeys("bar", "baz")).get should equal(IntegerReply(0))
   }
 
   it should "delete the given fields" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hset("foo", "field1".getBytes, "one".getBytes)
-    db.hset("foo", "field2".getBytes, "two".getBytes)
-    db.hset("foo", "field3".getBytes, "three".getBytes)
-    db.hset("foo", "field4".getBytes, "four".getBytes)
+    db.hset(rkey("foo"), rkey("field1"), "one".getBytes)
+    db.hset(rkey("foo"), rkey("field2"), "two".getBytes)
+    db.hset(rkey("foo"), rkey("field3"), "three".getBytes)
+    db.hset(rkey("foo"), rkey("field4"), "four".getBytes)
 
-    db.hdel("foo", Seq("field1", "field3"))
+    db.hdel(rkey("foo"), rkeys("field1", "field3"))
 
-    db.hget("foo", "field1".getBytes).get should equal(EmptyBulkReply())
-    db.hget("foo", "field2".getBytes).get.asInstanceOf[BulkReply].message should equal("two".getBytes)
-    db.hget("foo", "field3".getBytes).get should equal(EmptyBulkReply())
-    db.hget("foo", "field4".getBytes).get.asInstanceOf[BulkReply].message should equal("four".getBytes)
+    db.hget(rkey("foo"), rkey("field1")).get should equal(EmptyBulkReply())
+    db.hget(rkey("foo"), rkey("field2")).get should beBulkReplyWithValue("two")
+    db.hget(rkey("foo"), rkey("field3")).get should equal(EmptyBulkReply())
+    db.hget(rkey("foo"), rkey("field4")).get should beBulkReplyWithValue("four")
   }
 
   it should "return the number of fields actually deleted" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hset("foo", "field2".getBytes, "two".getBytes)
-    db.hset("foo", "field4".getBytes, "four".getBytes)
+    db.hset(rkey("foo"), rkey("field2"), "two".getBytes)
+    db.hset(rkey("foo"), rkey("field4"), "four".getBytes)
 
-    db.hdel("foo", Seq("field1", "field2", "field3", "field4")).get should equal(IntegerReply(2))
+    db.hdel(rkey("foo"), rkeys("field1", "field2", "field3", "field4")).get should equal(IntegerReply(2))
   }
 
 
@@ -54,42 +56,42 @@ class HashesSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
 
   it should "return an error if the value is not a hash" in {
     val db = new Db(FuturePool.immediatePool)
-    db.set("foo", "abc".getBytes)
+    db.set(rkey("foo"), "abc".getBytes)
 
-    db.hget("foo", "bar".getBytes).get should equal(Replies.errWrongType)
+    db.hget(rkey("foo"), rkey("bar")).get should equal(Replies.errWrongType)
   }
 
   it should "return nil if the key does not exist" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hget("foo", "bar".getBytes).get should equal(EmptyBulkReply())
+    db.hget(rkey("foo"), rkey("bar")).get should equal(EmptyBulkReply())
   }
 
   it should "return nil if the key exists but the field does not exist" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hset("foo", "bar".getBytes, "baz".getBytes)
+    db.hset(rkey("foo"), rkey("bar"), "baz".getBytes)
 
-    db.hget("foo", "hoge".getBytes).get should equal(EmptyBulkReply())
+    db.hget(rkey("foo"), rkey("hoge")).get should equal(EmptyBulkReply())
   }
 
   it should "return the requested field's value if it exists" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hset("foo", "bar".getBytes, "baz".getBytes)
+    db.hset(rkey("foo"), rkey("bar"), "baz".getBytes)
 
-    db.hget("foo", "bar".getBytes).get.asInstanceOf[BulkReply].message should equal("baz".getBytes)
+    db.hget(rkey("foo"), rkey("bar")).get should beBulkReplyWithValue("baz")
   }
 
   behavior of "HGETALL"
 
   it should "return an error if the value is not a hash" in {
     val db = new Db(FuturePool.immediatePool)
-    db.set("foo", "abc".getBytes)
+    db.set(rkey("foo"), "abc".getBytes)
 
-    db.hgetAll("foo").get should equal(Replies.errWrongType)
+    db.hgetAll(rkey("foo")).get should equal(Replies.errWrongType)
   }
 
   it should "return an empty list if the key does not exist" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hgetAll("foo").get should equal(EmptyMBulkReply())
+    db.hgetAll(rkey("foo")).get should equal(EmptyMBulkReply())
   }
 
   it should "return all the keys and values in the hash" in {
@@ -100,9 +102,9 @@ class HashesSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
       "field4" -> "four"
     )
     val db = new Db(FuturePool.immediatePool)
-    for ((k,v) <- myMap) db.hset("foo", k.getBytes, v.getBytes)
+    for ((k,v) <- myMap) db.hset(rkey("foo"), rkey(k), v.getBytes)
 
-    val list = decodeMBulkReply(db.hgetAll("foo").get.asInstanceOf[MBulkReply])
+    val list = decodeMBulkReply(db.hgetAll(rkey("foo")).get.asInstanceOf[MBulkReply])
     val resultMap = list.grouped(2).map(xs => (xs(0), xs(1))).toMap
 
     resultMap should equal(myMap)
@@ -112,83 +114,83 @@ class HashesSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
 
   it should "return an error if the value is not a hash" in {
     val db = new Db(FuturePool.immediatePool)
-    db.set("foo", "abc".getBytes)
+    db.set(rkey("foo"), "abc".getBytes)
 
-    db.hlen("foo").get should equal(Replies.errWrongType)
+    db.hlen(rkey("foo")).get should equal(Replies.errWrongType)
   }
 
   it should "return 0 if the field does not exist" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hlen("foo").get should equal(IntegerReply(0))
+    db.hlen(rkey("foo")).get should equal(IntegerReply(0))
   }
 
   it should "return the number of fields in the hash" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hset("foo", "bar".getBytes, "a".getBytes)
-    db.hset("foo", "baz".getBytes, "b".getBytes)
+    db.hset(rkey("foo"), rkey("bar"), "a".getBytes)
+    db.hset(rkey("foo"), rkey("baz"), "b".getBytes)
 
-    db.hlen("foo").get should equal(IntegerReply(2))
+    db.hlen(rkey("foo")).get should equal(IntegerReply(2))
   }
 
   behavior of "HMGET"
 
   it should "return an error if the value is not a hash" in {
     val db = new Db(FuturePool.immediatePool)
-    db.set("foo", "abc".getBytes)
+    db.set(rkey("foo"), "abc".getBytes)
 
-    db.hmget("foo", Seq("bar")).get should equal(Replies.errWrongType)
+    db.hmget(rkey("foo"), rkeys("bar")).get should equal(Replies.errWrongType)
   }
 
   it should "return an error if no fields are specified" in {
     val db = new Db(FuturePool.immediatePool)
-    db.set("foo", "abc".getBytes)
+    db.set(rkey("foo"), "abc".getBytes)
 
-    db.hmget("foo", Seq()).get should equal(ErrorReply("ERR wrong number of arguments for 'hmget' command"))
+    db.hmget(rkey("foo"), Seq()).get should equal(ErrorReply("ERR wrong number of arguments for 'hmget' command"))
   }
 
   it should "return empty byte arrays for all fields if key does not exist" in {
     val db = new Db(FuturePool.immediatePool)
-    val values = decodeMBulkReply(db.hmget("foo", Seq("a", "b")).get.asInstanceOf[MBulkReply])
+    val replies = db.hmget(rkey("foo"), rkeys("a", "b")).get.asInstanceOf[MBulkReply].messages
 
-    values should have length (2)
-    values(0) should have length (0)
-    values(1) should have length (0)
+    replies should have length (2)
+    replies(0) should equal(EmptyBulkReply())
+    replies(1) should equal(EmptyBulkReply())
   }
 
   it should "return the specified fields" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hset("foo", "a".getBytes(), "123".getBytes)
-    db.hset("foo", "c".getBytes(), "456".getBytes)
-    val values = decodeMBulkReply(db.hmget("foo", Seq("a", "b", "c")).get.asInstanceOf[MBulkReply])
+    db.hset(rkey("foo"), rkey("a"), "123".getBytes)
+    db.hset(rkey("foo"), rkey("c"), "456".getBytes)
+    val replies = db.hmget(rkey("foo"), rkeys("a", "b", "c")).get.asInstanceOf[MBulkReply].messages
 
-    values should have length (3)
-    values(0) should equal("123")
-    values(1) should have length (0)
-    values(2) should equal("456")
+    replies should have length (3)
+    replies(0) should beBulkReplyWithValue("123")
+    replies(1) should equal(EmptyBulkReply())
+    replies(2) should beBulkReplyWithValue("456")
   }
 
   behavior of "HSET"
 
   it should "return an error if the value is not a hash" in {
     val db = new Db(FuturePool.immediatePool)
-    db.set("foo", "abc".getBytes)
+    db.set(rkey("foo"), "abc".getBytes)
 
-    db.hset("foo", "bar".getBytes, "baz".getBytes).get should equal(Replies.errWrongType)
+    db.hset(rkey("foo"), rkey("bar"), "baz".getBytes).get should equal(Replies.errWrongType)
   }
 
   it should "return 1 if the field was added to hash" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hset("foo", "a".getBytes, "b".getBytes)
+    db.hset(rkey("foo"), rkey("a"), "b".getBytes)
 
-    val reply = db.hset("foo", "bar".getBytes, "baz".getBytes).get
+    val reply = db.hset(rkey("foo"), rkey("bar"), "baz".getBytes).get
     reply should equal(IntegerReply(1))
   }
 
   it should "return 0 if an existing hash field was updated" in {
     val db = new Db(FuturePool.immediatePool)
-    db.hset("foo", "bar".getBytes, "old".getBytes)
+    db.hset(rkey("foo"), rkey("bar"), "old".getBytes)
 
-    val reply = db.hset("foo", "bar".getBytes, "new".getBytes).get
+    val reply = db.hset(rkey("foo"), rkey("bar"), "new".getBytes).get
     reply should equal(IntegerReply(0))
   }
 

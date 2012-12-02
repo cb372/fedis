@@ -5,9 +5,9 @@ import com.twitter.finagle.redis.protocol._
 import com.twitter.util.FuturePool
 
 trait KeyValueStore {
-  def iterator: Iterator[(String, Entry)]
+  def iterator: Iterator[(RKey, Entry)]
 
-  def remove(key: String)
+  def remove(key: RKey)
 }
 
 object DbConstants {
@@ -53,7 +53,7 @@ class Db(val pool: FuturePool)
 
   def iterator = state.read(_.iterator)
 
-  def remove(key: String) {
+  def remove(key: RKey) {
     state.update {m => (Some(m - key), Unit)}
   }
 

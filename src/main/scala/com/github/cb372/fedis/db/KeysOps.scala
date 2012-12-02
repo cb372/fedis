@@ -9,23 +9,29 @@ import scala.Some
 import com.twitter.finagle.redis.protocol.EmptyBulkReply
 import com.twitter.finagle.redis.protocol.EmptyMBulkReply
 import com.twitter.finagle.redis.protocol.IntegerReply
+import org.jboss.netty.buffer.ChannelBuffer
+import util.matching.Regex
+import java.nio.charset.Charset
+import org.jboss.netty.util.CharsetUtil
 
 /**
  * Author: chris
  * Created: 6/27/12
  */
 
-trait KeysOps { this: DbCommon =>
+trait KeysOps extends ReplyFactory {
+  this: DbCommon =>
 
-  def del(keys: List[String]) = pool {
+  def del(keys: Seq[RKey]) = pool {
     state.update { m =>
-      val found = keys.filter(m.contains(_))
+
+      val found = keys.filter(k => m.contains(k))
       val updated = found.foldLeft(m)(_ - _)
       updateAndReply(updated, IntegerReply(found.size))
     }
   }
 
-  def exists(key: String) = pool {
+  def exists(key: RKey) = pool {
     state.read { m =>
       if (m contains key)
         IntegerReply(1)
@@ -34,7 +40,7 @@ trait KeysOps { this: DbCommon =>
     }
   }
 
-  def expire(key: String, after: Long) = pool {
+  def expire(key: RKey, after: Long) = pool {
     state.update { m =>
       m get(key) match {
         case Some(Entry(value, _)) => {
@@ -47,7 +53,7 @@ trait KeysOps { this: DbCommon =>
     }
   }
 
-  def expireAt(key: String, timestamp: Time) = pool {
+  def expireAt(key: RKey, timestamp: Time) = pool {
     state.update { m =>
       m get(key) match {
         case Some(Entry(value, _)) => {
@@ -62,13 +68,16 @@ trait KeysOps { this: DbCommon =>
   protected val evenBackslashes = """(?<!\\)(\\\\)*(?!\\)"""
 
   def keys(pattern: String) = pool {
+    def regexMatchesRKey(key: RKey, regex: Regex): Boolean =
+      regex.unapplySeq(new String(key.array, CharsetUtil.UTF_8)).isDefined
+
     try {
       val regex = pattern
         .replaceAll(evenBackslashes + """\*""", ".*")
         .replaceAll(evenBackslashes + """\?""", ".")
         .r
       state.read { m =>
-        val matchingKeys = m.keys.filter(regex.unapplySeq(_).isDefined).map(s => BulkReply(s.getBytes)).toList
+        val matchingKeys = m.keys.filter(regexMatchesRKey(_, regex)).map(k => bulkReply(k.array)).toList
         matchingKeys match {
           case Nil => EmptyMBulkReply()
           case ks => MBulkReply(ks)
@@ -81,7 +90,7 @@ trait KeysOps { this: DbCommon =>
     }
   }
 
-  def persist(key: String) = pool {
+  def persist(key: RKey) = pool {
     state.update { m =>
       m get(key) flatMap {
         case Entry(value, expiry) => {
@@ -104,12 +113,12 @@ trait KeysOps { this: DbCommon =>
         val keys = m.keys
         // Note: this is O(n) in the size of the map!
         val randomKey = keys.drop(rnd.nextInt(keys.size)).head
-        BulkReply(randomKey.getBytes("UTF-8"))
+        bulkReply(randomKey.array)
       }
     }
   }
 
-  def rename(key: String, newKey: String) = pool {
+  def rename(key: RKey, newKey: RKey) = pool {
     if (key == newKey)
       Replies.errSourceAndDestEqual
     else {
@@ -125,7 +134,7 @@ trait KeysOps { this: DbCommon =>
     }
   }
 
-  def renameNx(key: String, newKey: String) = pool {
+  def renameNx(key: RKey, newKey: RKey) = pool {
     if (key == newKey)
       Replies.errSourceAndDestEqual
     else {
@@ -146,7 +155,7 @@ trait KeysOps { this: DbCommon =>
     }
   }
 
-  def ttl(key: String) = pool {
+  def ttl(key: RKey) = pool {
     state.read { m =>
       m get(key) flatMap {
         case Entry(_, expiry) => {
@@ -159,7 +168,7 @@ trait KeysOps { this: DbCommon =>
     }
   }
 
-  def taipu(key: String) = pool {
+  def taipu(key: RKey) = pool {
     state.read { m =>
       m get(key) match {
         case None => StatusReply("none")

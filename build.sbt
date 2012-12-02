@@ -13,7 +13,7 @@ crossScalaVersions := Seq("2.9.0", "2.9.1", "2.9.2")
 resolvers += "Twitter Maven repo" at "http://maven.twttr.com/"
 
 libraryDependencies ++= Seq(
-    "com.twitter" % "finagle-redis" % "5.3.1"
+    "com.twitter" % "finagle-redis" % "5.3.23"
     )
 
 libraryDependencies ++= Seq(

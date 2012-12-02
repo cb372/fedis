@@ -10,9 +10,10 @@ import collection.immutable.IndexedSeq
  * Created: 6/27/12
  */
 
-trait StringsOps { this: DbCommon =>
+trait StringsOps extends ReplyFactory {
+  this: DbCommon =>
 
-  def append(key: String, suffix: Array[Byte]) = pool {
+  def append(key: RKey, suffix: Array[Byte]) = pool {
     state.update { m =>
       m get(key) match {
         case Some(Entry(RString(value), expiry)) => {
@@ -30,21 +31,21 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
-  def decr(key: String) = incrBy(key, -1L)
+  def decr(key: RKey) = incrBy(key, -1L)
 
-  def decrBy(key: String, amount: Long) = incrBy(key, -amount)
+  def decrBy(key: RKey, amount: Long) = incrBy(key, -amount)
 
-  def get(key: String) = pool {
+  def get(key: RKey) = pool {
     state.read { m =>
       m get(key) match {
-        case Some(Entry(RString(value), _)) => BulkReply(value.toArray)
+        case Some(Entry(RString(value), _)) => bulkReply(value.toArray)
         case Some(_) => Replies.errWrongType
         case None => EmptyBulkReply()
       }
     }
   }
 
-  def getBit(key: String, offset: Int) = pool {
+  def getBit(key: RKey, offset: Int) = pool {
     state.read { m =>
       m get(key) match {
         case Some(Entry(RString(value), _)) => {
@@ -64,17 +65,21 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
-  def getRange(key: String, start: Int, end: Int) = pool {
+  def getRange(key: RKey, start: Long, end: Long) = pool {
     state.read { m =>
       m get(key) match {
         case Some(Entry(RString(value), _)) => {
           val from = positiveIndex(start, value.length)
           val to = positiveIndex(end, value.length)
-          val substr = value.slice(from, to + 1)
+          if (from > Int.MaxValue || to > Int.MaxValue - 1) {
+            // TODO log a warning
+            EmptyBulkReply()
+          }
+          val substr = value.slice(from.toInt, to.toInt + 1)
           if (substr.isEmpty)
             EmptyBulkReply()
           else
-            BulkReply(substr.toArray)
+            bulkReply(substr.toArray)
         }
         case Some(_) => Replies.errWrongType
         case None => EmptyBulkReply()
@@ -82,19 +87,19 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
-  private def positiveIndex(index: Int, len: Int): Int =
+  private def positiveIndex(index: Long, len: Long): Long =
     if (index < 0)
       (len + index)
     else
       index
 
 
-  def getSet(key: String, newValue: Array[Byte]) = pool {
+  def getSet(key: RKey, newValue: Array[Byte]) = pool {
     state.update { m =>
       m get(key) match {
         case Some(Entry(RString(oldValue), expiry)) => {
           val updated = m + (key -> Entry(RString(newValue), expiry)) // copy expiry
-          updateAndReply(updated, BulkReply(oldValue.toArray))
+          updateAndReply(updated, bulkReply(oldValue.toArray))
         }
         case Some(_) => noUpdate(Replies.errWrongType)
         case None => {
@@ -105,9 +110,9 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
-  def incr(key: String) = incrBy(key, 1L)
+  def incr(key: RKey) = incrBy(key, 1L)
 
-  def incrBy(key: String, amount: Long) = pool {
+  def incrBy(key: RKey, amount: Long) = pool {
     state.update { m =>
       m get(key) match {
         case Some(Entry(RString(value), expiry)) => {
@@ -146,19 +151,19 @@ trait StringsOps { this: DbCommon =>
       after < before
   }
 
-  def mget(keys: List[String]) = pool {
+  def mget(keys: Seq[RKey]) = pool {
     keys match {
       case Nil => Replies.errWrongNumArgs("mget")
       case _ => state.read { m =>
         val values = keys map { k =>
-          m.get(k).collect({case Entry(RString(value), _) => BulkReply(value.toArray)}) getOrElse EmptyBulkReply()
+          m.get(k).collect({case Entry(RString(value), _) => bulkReply(value.toArray)}) getOrElse EmptyBulkReply()
         }
-        MBulkReply(values)
+        MBulkReply(values.toList)
       }
     }
   }
 
-  def mset(kv: Map[String, Array[Byte]]) = pool {
+  def mset(kv: Map[RKey, Array[Byte]]) = pool {
     if (kv.isEmpty)
       Replies.errWrongNumArgs("mset")
     else state.update { m =>
@@ -169,7 +174,7 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
-  def msetNx(kv: Map[String, Array[Byte]]) = pool {
+  def msetNx(kv: Map[RKey, Array[Byte]]) = pool {
     if (kv.isEmpty)
       Replies.errWrongNumArgs("msetnx")
     else state.update { m =>
@@ -186,14 +191,14 @@ trait StringsOps { this: DbCommon =>
 
 
 
-  def set(key: String, value: Array[Byte]) = pool {
+  def set(key: RKey, value: Array[Byte]) = pool {
     state.update { m =>
       val updated = m + (key -> Entry(RString((value)))) // no expiry (clear any existing expiry)
       updateAndReply(updated, Replies.ok)
     }
   }
 
-  def setBit(key: String, offset: Int, value: Int) = pool {
+  def setBit(key: RKey, offset: Int, value: Int) = pool {
     if (value != 0 && value != 1) {
       Replies.errNotABit
     } else state.update { m =>
@@ -247,7 +252,7 @@ trait StringsOps { this: DbCommon =>
     (newSeq, oldBit)
   }
 
-  def setEx(key: String, expireAfter: Long, value: Array[Byte]) = pool {
+  def setEx(key: RKey, expireAfter: Long, value: Array[Byte]) = pool {
     state.update { m =>
       val expiry = Time.now + expireAfter.seconds
       val updated = m + (key -> Entry(RString(value), Some(expiry))) // set value and expiry
@@ -255,7 +260,7 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
-  def setNx(key: String, value: Array[Byte]) = pool {
+  def setNx(key: RKey, value: Array[Byte]) = pool {
     state.update { m =>
       if (m contains(key))
         noUpdate(IntegerReply(0))
@@ -266,7 +271,7 @@ trait StringsOps { this: DbCommon =>
     }
   }
 
-  def setRange(key: String, offset: Int, substr: Array[Byte]) = pool {
+  def setRange(key: RKey, offset: Int, substr: Array[Byte]) = pool {
     if (offset < 0)
       Replies.errOffsetOutOfRange
     else
@@ -295,7 +300,7 @@ trait StringsOps { this: DbCommon =>
       }
   }
 
-  def strlen(key: String) = pool {
+  def strlen(key: RKey) = pool {
     state.read { m =>
       m get(key) match {
         case Some(Entry(RString(value), _)) => IntegerReply(value.length)

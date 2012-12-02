@@ -28,23 +28,9 @@ object RString {
  * A Redis hash, represented as a Map of Array[Byte] -> Array[Byte]
  * @param hash the underlying map
  */
-case class RHash(hash: Map[HashKey, Array[Byte]]) extends RVal
+case class RHash(hash: Map[RKey, Array[Byte]]) extends RVal
 
 // TODO custom data structure to represent Redis sorted set. Sorted list, plus set?
 case class RSortedSet(set: Seq[(String, Double)]) extends RVal
 
-/**
- * An Array[Byte] with overriden hashCode() and equals() methods.
- * @param array the underlying array
- */
-case class HashKey(array: Array[Byte]) {
-  val hashcode = java.util.Arrays.hashCode(array)
-
-  override def hashCode() = hashcode
-
-  override def equals(other: Any): Boolean = other match {
-    case o: HashKey => java.util.Arrays.equals(array, o.array)
-    case _ => false
-  }
-}
 

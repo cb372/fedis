@@ -5,13 +5,14 @@ import org.scalatest.fixture
 import java.util.concurrent.{CyclicBarrier, TimeUnit, Executors, CountDownLatch}
 import com.twitter.util.{Future, FuturePool}
 import com.twitter.finagle.redis.protocol._
+import com.twitter.finagle.redis.util.CBToString
 
 /**
  * Author: chris
  * Created: 6/20/12
  */
 
-class DbConcurrencySpec extends fixture.FlatSpec with ShouldMatchers {
+class DbConcurrencySpec extends fixture.FlatSpec with ShouldMatchers with DbTestUtils {
 
   behavior of "Db"
 
@@ -34,9 +35,9 @@ class DbConcurrencySpec extends fixture.FlatSpec with ShouldMatchers {
       i <- 0 until numHashes
       j <- 0 until numThreads
     } {
-      db.hget(i.toString, j.toString.getBytes).get match {
+      db.hget(rkey(i.toString), rkey(j.toString)).get match {
         case reply: BulkReply => {
-          val msg = new String(reply.message)
+          val msg = CBToString(reply.message)
           msg should equal(j.toString)
         }
         case reply: EmptyBulkReply => fail("No value with key %s and field %s".format(i,j))
@@ -62,13 +63,13 @@ class DbConcurrencySpec extends fixture.FlatSpec with ShouldMatchers {
     override def run() {
       start.await()
 
-      val field = myId.toString.getBytes
+      val field = rkey(myId.toString)
       val value = myId.toString.getBytes
 
       // send lots of writes
       val futures: Seq[Future[Reply]] =
         for (k <- 0 until numHashes)
-          yield db.hset(k.toString, field, value)
+          yield db.hset(rkey(k.toString), field, value)
 
       // wait for them all to finish
       Future.join(futures)

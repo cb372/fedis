@@ -6,6 +6,7 @@ import java.net.SocketAddress
 import com.twitter.finagle.{Service, Filter}
 import com.twitter.finagle.redis.protocol._
 import com.twitter.util.Future
+import util.ImplicitConversions
 
 /**
  * Filter to map a client remote address to a Redis session.
@@ -27,9 +28,9 @@ class SessionManagement(serverPassword: Option[String]) extends Filter[CmdFromCl
       Session()
     })
     request.cmd match {
-      case Auth(code) => auth(key, session, code)
+      case Auth(code) => auth(key, session, ImplicitConversions.channelBufferToString(code))
       case Select(index) => select(key, session, index)
-      case Quit() => quit(key)
+      case Quit => quit(key)
       case _ => {
         // pass all other commands onto service, along with the session
         service(SessionAndCommand(session, request.cmd))

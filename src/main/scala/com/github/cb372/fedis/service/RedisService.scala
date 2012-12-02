@@ -6,7 +6,9 @@ import com.twitter.finagle.redis.ServerError
 import com.twitter.finagle.redis.protocol._
 import com.twitter.util.{Timer, Future, FuturePool}
 import com.twitter.conversions.time._
-import db.{KeyValueStoreTask, Db}
+import db.{RKey, KeyValueStoreTask, Db}
+import org.jboss.netty.buffer.ChannelBuffer
+import org.jboss.netty.util.CharsetUtil
 
 class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
   extends Service[SessionAndCommand, Reply] {
@@ -16,6 +18,8 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
   // run the expired-values reaper once a second
   timer.schedule(1 second){reaper.run(dbs)}
 
+  import com.github.cb372.fedis.util.ImplicitConversions._
+
   def apply(req: SessionAndCommand): Future[Reply] = {
     // Choose the appropriate DB for the client
     val db = dbs(req.session.db)
@@ -24,7 +28,7 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
         /*
          * Keys
          */
-      case Del(keys) => db.del(keys)
+      case Del(keys) => db.del(keys.map(channelBufferToRKey((_))))
       case Exists(key) => db.exists(key)
       case Expire(key, seconds) => db.expire(key, seconds)
       case ExpireAt(key, timestamp) => db.expireAt(key, timestamp)
@@ -48,7 +52,7 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case GetSet(key, value) => db.getSet(key, value)
       case Incr(key) => db.incr(key)
       case incrby: IncrBy => db.incrBy(incrby.key, incrby.amount) // IncrBy is not a case class :(
-      case MGet(keys) => db.mget(keys)
+      case MGet(keys) => db.mget(keys.map(channelBufferToRKey(_)))
       case MSet(kv) => db.mset(kv)
       case MSetNx(kv) => db.msetNx(kv)
       case Set(key, value) => db.set(key, value)
@@ -61,11 +65,11 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
         /*
          * Hashes
          */
-      case HDel(key, fields) => db.hdel(key, fields)
-      case HGet(key, field) => db.hget(new String(key), field)
-      case HGetAll(key) => db.hgetAll(new String(key))
-      case HMGet(key, fields) => db.hmget(key, fields)
-      case HSet(key, field, value) => db.hset(new String(key), field, value)
+      case HDel(key, fields) => db.hdel(key, fields.map(channelBufferToRKey(_)))
+      case HGet(key, field) => db.hget(key, field)
+      case HGetAll(key) => db.hgetAll(key)
+      case HMGet(key, fields) => db.hmget(key, fields.map(channelBufferToRKey(_)))
+      case HSet(key, field, value) => db.hset(key, field, value)
 
       case _ => Future.exception(ServerError("Not implemented"))
     }

@@ -54,9 +54,9 @@ object Server {
     }
   }
 
-  private def printUsage() =
+  private def printUsage() {
     println("Usage: %s [port [password]]".format(Server.getClass.getName))
-
+  }
 
   private class Resources(threadPoolSize: Int) extends Closeable {
     val threadPool = Executors.newFixedThreadPool(threadPoolSize)

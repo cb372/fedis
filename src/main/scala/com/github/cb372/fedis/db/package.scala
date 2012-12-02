@@ -7,9 +7,9 @@ package com.github.cb372.fedis
 package object db {
 
   /**
-   * The contents of a Redis DB. A key-value store with String keys mapping to `Entry`s.
+   * The contents of a Redis DB. A key-value store with byte array keys mapping to `Entry`s.
    */
-  type DbContents = Map[String, Entry]
+  type DbContents = Map[RKey, Entry]
 
   /**
    * A function that reads a value from a DB.
