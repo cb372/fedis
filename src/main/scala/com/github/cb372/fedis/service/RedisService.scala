@@ -72,6 +72,24 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case HMGet(key, fields) => db.hmget(key, fields.map(channelBufferToRKey(_)))
       case HSet(key, field, value) => db.hset(key, field, value)
 
+        /*
+         * Lists
+         */
+      case LLen(key) => db.llen(key)
+      case LPop(key) => db.lpop(key)
+      case LPush(key, values) => db.lpush(key, values.map(channelBufferToByteArray(_)))
+      case RPop(key) => db.rpop(key)
+      case RPush(key, values) => db.rpush(key, values.map(channelBufferToByteArray(_)))
+
+        /*
+         * Sets
+         */
+      case SAdd(key, values) => db.sadd(key, values.map(channelBufferToRKey(_)))
+      case SCard(key) => db.scard(key)
+      case SIsMember(key, value) => db.sismember(key, value)
+      case SMembers(key) => db.smembers(key)
+      case SRem(key, values) => db.srem(key, values.map(channelBufferToRKey(_)))
+
       case _ => Future.exception(ServerError("Not implemented"))
     }
   }

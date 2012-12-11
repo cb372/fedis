@@ -339,16 +339,14 @@ class KeysSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     reply should equal(StatusReply("hash"))
   }
 
-  /*
-   * Not implemented
-   *
   it should "return 'list' if value is a list" in {
     val db = new Db(FuturePool.immediatePool)
-    // lpush("foo", ...
+    db.lpush(rkey("foo"), Seq("hello".getBytes))
     val reply = db.taipu(rkey("foo")).get
     reply should equal(StatusReply("list"))
   }
 
+  /*
   it should "return 'set' if value is a set" in {
     val db = new Db(FuturePool.immediatePool)
     // sadd("foo", ...
@@ -363,4 +361,5 @@ class KeysSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     reply should equal(StatusReply("zset"))
   }
   */
+
 }

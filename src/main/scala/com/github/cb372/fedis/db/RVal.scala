@@ -30,6 +30,10 @@ object RString {
  */
 case class RHash(hash: Map[RKey, Array[Byte]]) extends RVal
 
+case class RList(list: List[Array[Byte]]) extends RVal
+
+case class RSet(set: Set[RKey]) extends RVal
+
 // TODO custom data structure to represent Redis sorted set. Sorted list, plus set?
 case class RSortedSet(set: Seq[(String, Double)]) extends RVal
 

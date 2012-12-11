@@ -47,7 +47,9 @@ class Db(val pool: FuturePool)
   with DbCommon
   with KeysOps
   with StringsOps
-  with HashesOps {
+  with HashesOps
+  with ListsOps
+  with SetsOps {
 
   protected val state: DbState = new AtomicRefDbState
 

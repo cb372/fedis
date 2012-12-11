@@ -174,6 +174,8 @@ trait KeysOps extends ReplyFactory {
         case None => StatusReply("none")
         case Some(Entry(RString(_), _)) => StatusReply("string")
         case Some(Entry(RHash(_), _)) => StatusReply("hash")
+        case Some(Entry(RList(_), _)) => StatusReply("list")
+        case Some(Entry(RSet(_), _)) => StatusReply("set")
         case _ => StatusReply("wibble")
       }
     }
