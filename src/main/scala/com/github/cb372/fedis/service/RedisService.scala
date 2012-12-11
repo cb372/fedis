@@ -68,6 +68,7 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case HDel(key, fields) => db.hdel(key, fields.map(channelBufferToRKey(_)))
       case HGet(key, field) => db.hget(key, field)
       case HGetAll(key) => db.hgetAll(key)
+      case HKeys(key) => db.hkeys(key)
       case HMGet(key, fields) => db.hmget(key, fields.map(channelBufferToRKey(_)))
       case HSet(key, field, value) => db.hset(key, field, value)
 

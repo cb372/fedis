@@ -110,6 +110,33 @@ class HashesSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     resultMap should equal(myMap)
   }
 
+  behavior of "HKEYS"
+
+  it should "return an empty list if the key does not exist" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.hkeys(rkey("foo")).get should equal(EmptyMBulkReply())
+  }
+
+  it should "return an error if the value is not a hash" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.set(rkey("foo"), "abc".getBytes)
+
+    db.hkeys(rkey("foo")).get should equal(Replies.errWrongType)
+  }
+
+  it should "return all the keys in the hash" in {
+    val myMap = Map(
+      "field1" -> "one",
+      "field2" -> "two",
+      "field3" -> "three"
+    )
+    val db = new Db(FuturePool.immediatePool)
+    for ((k,v) <- myMap) db.hset(rkey("foo"), rkey(k), v.getBytes)
+
+    val list = decodeMBulkReply(db.hkeys(rkey("foo")).get.asInstanceOf[MBulkReply])
+    list.toSet should equal(collection.Set("field1", "field2", "field3"))
+  }
+
   behavior of "HLEN"
 
   it should "return an error if the value is not a hash" in {

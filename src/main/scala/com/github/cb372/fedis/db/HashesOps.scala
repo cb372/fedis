@@ -54,6 +54,19 @@ trait HashesOps extends ReplyFactory {
     }
   }
 
+  def hkeys(key: RKey) = pool {
+    state.read { m =>
+      m get(key) match {
+        case Some(Entry(RHash(hash), _)) => {
+          val keys = hash.keys.map(k => bulkReply(k.array)).toList
+          MBulkReply(keys)
+        }
+        case Some(_) => Replies.errWrongType
+        case None => EmptyMBulkReply()
+      }
+    }
+  }
+
   /*
    * D'oh! finagle-redis doesn't provide a protocol class for this command.
    */
