@@ -51,6 +51,15 @@ class HashesSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     db.hdel(rkey("foo"), rkeys("field1", "field2", "field3", "field4")).get should equal(IntegerReply(2))
   }
 
+  it should "delete the hash if it becomes empty" in {
+    val db = new Db(FuturePool.immediatePool)
+    db.hset(rkey("foo"), rkey("field2"), "two".getBytes)
+    db.hset(rkey("foo"), rkey("field4"), "four".getBytes)
+
+    db.hdel(rkey("foo"), rkeys("field1", "field2", "field3", "field4"))
+    db.taipu(rkey("foo")).get should equal(StatusReply("none"))
+
+  }
 
   behavior of "HGET"
 

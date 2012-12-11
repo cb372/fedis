@@ -17,7 +17,12 @@ trait HashesOps extends ReplyFactory {
           val deleteCount = fields.count(hash.contains(_))
           if (deleteCount > 0) {
             val newHash = hash -- fields
-            val updated = m + (key -> Entry(RHash(newHash), expiry)) // copy expiry
+            val updated =
+              if (newHash.isEmpty)
+                // delete the key
+                m - key
+              else
+                m + (key -> Entry(RHash(newHash), expiry)) // copy expiry
             updateAndReply(updated, IntegerReply(deleteCount))
           } else
             noUpdate(IntegerReply(0))
