@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+v1.2.0 (15 December 2012)
+--------------------
+
+* Support for Redis lists and sets
+    * Supported list commands: LLEN, LPUSH, LPOP, RPUSH, RPOP
+    * Supported set commands: SCARD, SADD, SREM, SISMEMBER, SMEMBERS
+* Add HKEYS command
+* Fix issue #2
+* Upgrade finagle-redis dependency to 5.3.23.
+
 v1.1.0 (25 July 2012)
 ---------------------
 
