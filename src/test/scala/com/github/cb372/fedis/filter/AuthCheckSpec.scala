@@ -7,13 +7,14 @@ import com.twitter.finagle.Service
 import com.twitter.util.Future
 import com.twitter.finagle.redis.protocol.{ErrorReply, BulkReply, Reply, Get}
 import com.github.cb372.fedis.db.DbTestUtils
-import com.twitter.finagle.util.Conversions
 import com.twitter.finagle.redis.util.StringToChannelBuffer
+import com.github.cb372.fedis.util.ImplicitConversions._
+import com.twitter.finagle.redis.util._
 
 class AuthCheckSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
 
   trait Fixture {
-    val successReply = BulkReply(StringToChannelBuffer("success!"))
+    val successReply = BulkReply(StringToBuf("success!"))
     val mockService = new Service[SessionAndCommand, Reply] {
       def apply(request: SessionAndCommand) =
         Future.value(successReply)
@@ -24,23 +25,23 @@ class AuthCheckSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
 
   it should "deny unauthorised access to a secured server" in new Fixture {
     val authCheck = new AuthCheck(true)
-    val unauthCmd = SessionAndCommand(Session(false), Get(StringToChannelBuffer("foo")))
+    val unauthCmd = SessionAndCommand(Session(false), Get( StringToBuf("foo")))
     val reply = authCheck.apply(unauthCmd, mockService)
-    reply.get() should be (ErrorReply("ERR operation not permitted"))
+    reply.toJavaFuture.get() should be (ErrorReply("ERR operation not permitted"))
   }
 
   it should "allow authorised access to a secured server" in new Fixture {
     val authCheck = new AuthCheck(true)
-    val unauthCmd = SessionAndCommand(Session(true), Get(StringToChannelBuffer("foo")))
+    val unauthCmd = SessionAndCommand(Session(true), Get(StringToBuf("foo")))
     val reply = authCheck.apply(unauthCmd, mockService)
-    reply.get() should be (successReply)
+    reply.toJavaFuture.get() should be (successReply)
   }
 
   it should "allow unauthorised access to an unsecured server" in new Fixture {
     val authCheck = new AuthCheck(false)
-    val unauthCmd = SessionAndCommand(Session(false), Get(StringToChannelBuffer("foo")))
+    val unauthCmd = SessionAndCommand(Session(false), Get(StringToBuf("foo")))
     val reply = authCheck.apply(unauthCmd, mockService)
-    reply.get() should be (successReply)
+    reply.toJavaFuture .get() should be (successReply)
   }
 
 }

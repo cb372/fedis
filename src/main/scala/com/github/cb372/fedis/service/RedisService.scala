@@ -7,8 +7,6 @@ import com.twitter.finagle.redis.protocol._
 import com.twitter.util.{Timer, Future, FuturePool}
 import com.twitter.conversions.time._
 import db.{RKey, KeyValueStoreTask, Db}
-import org.jboss.netty.buffer.ChannelBuffer
-import org.jboss.netty.util.CharsetUtil
 
 class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
   extends Service[SessionAndCommand, Reply] {
@@ -55,7 +53,7 @@ class RedisService(pool: FuturePool, timer: Timer, reaper: KeyValueStoreTask)
       case MGet(keys) => db.mget(keys.map(channelBufferToRKey(_)))
       case MSet(kv) => db.mset(kv)
       case MSetNx(kv) => db.msetNx(kv)
-      case Set(key, value) => db.set(key, value)
+      case Set(key, value,None,false,false) => db.set(key, value)
       case SetBit(key, offset, value) => db.setBit(key, offset, value)
       case SetEx(key, seconds, value) => db.setEx(key, seconds, value)
       case SetNx(key, value) => db.setNx(key, value)

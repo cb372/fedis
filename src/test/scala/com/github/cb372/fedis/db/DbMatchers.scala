@@ -3,6 +3,7 @@ package com.github.cb372.fedis.db
 import org.scalatest.matchers.{MatchResult, Matcher}
 import com.twitter.finagle.redis.protocol.{BulkReply, Reply}
 import com.twitter.finagle.redis.util.CBToString
+import com.github.cb372.fedis.util.ImplicitConversions._
 
 /**
  * Author: chris

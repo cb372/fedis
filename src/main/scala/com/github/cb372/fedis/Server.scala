@@ -4,13 +4,11 @@ import db.ExpiredEntriesReaper
 import service.RedisService
 import codec.RedisServerCodec
 import filter.{AuthCheck, SessionManagement}
-
 import com.twitter.finagle.redis.protocol._
-import com.twitter.finagle.builder.{Server => FinagleServer, ServerBuilder}
-import com.twitter.util.{JavaTimer, Duration, FuturePool}
-
+import com.twitter.finagle.builder.{ServerBuilder, Server => FinagleServer}
+import com.twitter.util.{Command => _, _}
 import java.io.Closeable
-import java.net.{SocketAddress, InetSocketAddress}
+import java.net.{InetSocketAddress, SocketAddress}
 import java.util.concurrent.Executors
 
 case class Options(port: Int = 6379,
@@ -79,21 +77,36 @@ object Server {
    */
   private class ResourceTidyingServerWrapper(base: FinagleServer,
                                              resources: Resources) extends FinagleServer {
-    def localAddress = base.localAddress
+     // def localAddress  = base.boundAddress
 
-    def close(timeout: Duration) {
+    /*override def close(timeout: Duration) {
       try {
         base.close(timeout)
       } finally {
         resources.close()
       }
-    }
+    }*/
+
+    override def boundAddress: SocketAddress = base.boundAddress
+
+    override protected def closeServer(deadline: Time): Future[Unit] = ???
+
+
+    override def ready(timeout: Duration)(implicit permit: Awaitable.CanAwait): ResourceTidyingServerWrapper.this.type = ???
+
+
+    override def result(timeout: Duration)(implicit permit: Awaitable.CanAwait): Unit =base.result(timeout)
+
+
+    override def isReady(implicit permit: Awaitable.CanAwait): Boolean = base.isReady
+
+
   }
 }
 
 object Constants {
 
-  // The maximum DB index that can be SELECTed
+   // The maximum DB index that can be SELECTed
   val maxDbIndex = 15
   val numDbs = maxDbIndex + 1 // because DBs are zero-indexed
 

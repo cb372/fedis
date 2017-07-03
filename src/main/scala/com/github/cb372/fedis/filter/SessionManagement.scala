@@ -3,8 +3,10 @@ package filter
 
 import collection.mutable.{Map => MMap}
 import java.net.SocketAddress
-import com.twitter.finagle.{Service, Filter}
+
+import com.twitter.finagle.{Filter, Service}
 import com.twitter.finagle.redis.protocol._
+import com.twitter.io.Buf
 import com.twitter.util.Future
 import util.ImplicitConversions
 
@@ -28,7 +30,12 @@ class SessionManagement(serverPassword: Option[String]) extends Filter[CmdFromCl
       Session()
     })
     request.cmd match {
-      case Auth(code) => auth(key, session, ImplicitConversions.channelBufferToString(code))
+      case Auth(code) => {
+        val mc:Buf=code
+        val str:String=ImplicitConversions.bufToString(code)
+        auth(key, session, str)
+      }
+     // case Auth(code) => auth(key, session, code)
       case Select(index) => select(key, session, index)
       case Quit => quit(key)
       case _ => {

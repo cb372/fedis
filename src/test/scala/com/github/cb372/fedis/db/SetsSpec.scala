@@ -20,23 +20,23 @@ class SetsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     val db = new Db(FuturePool.immediatePool)
     db.set(rkey("foo"), "abc".getBytes)
 
-    db.sadd(rkey("foo"), rkeys("a", "b")).get should equal(Replies.errWrongType)
+    db.sadd(rkey("foo"), rkeys("a", "b")).toJavaFuture.get() should equal(Replies.errWrongType)
   }
 
   it should "return the number of members added" in {
     val db = new Db(FuturePool.immediatePool)
 
     db.sadd(rkey("foo"), rkeys("b", "c"))
-    db.sadd(rkey("foo"), rkeys("a", "b", "c", "d")).get should equal(IntegerReply(2))
+    db.sadd(rkey("foo"), rkeys("a", "b", "c", "d")).toJavaFuture.get() should equal(IntegerReply(2))
   }
 
   it should "add members that are not already present" in {
     val db = new Db(FuturePool.immediatePool)
 
     db.sadd(rkey("foo"), rkeys("b", "c"))
-    db.scard(rkey("foo")).get should equal(IntegerReply(2))
+    db.scard(rkey("foo")).toJavaFuture.get() should equal(IntegerReply(2))
     db.sadd(rkey("foo"), rkeys("a", "b", "c", "d"))
-    db.scard(rkey("foo")).get should equal(IntegerReply(4))
+    db.scard(rkey("foo")).toJavaFuture.get() should equal(IntegerReply(4))
   }
 
   behavior of "SCARD"
@@ -45,19 +45,19 @@ class SetsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     val db = new Db(FuturePool.immediatePool)
     db.set(rkey("foo"), "abc".getBytes)
 
-    db.scard(rkey("foo")).get should equal(Replies.errWrongType)
+    db.scard(rkey("foo")).toJavaFuture.get() should equal(Replies.errWrongType)
   }
 
   it should "return 0 if the field does not exist" in {
     val db = new Db(FuturePool.immediatePool)
-    db.scard(rkey("foo")).get should equal(IntegerReply(0))
+    db.scard(rkey("foo")).toJavaFuture.get() should equal(IntegerReply(0))
   }
 
   it should "return the number of fields in the set" in {
     val db = new Db(FuturePool.immediatePool)
     db.sadd(rkey("foo"), rkeys("bar", "baz"))
 
-    db.scard(rkey("foo")).get should equal(IntegerReply(2))
+    db.scard(rkey("foo")).toJavaFuture.get() should equal(IntegerReply(2))
   }
 
   behavior of "SISMEMBER"
@@ -66,26 +66,26 @@ class SetsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     val db = new Db(FuturePool.immediatePool)
     db.set(rkey("foo"), "abc".getBytes)
 
-    db.sismember(rkey("foo"), rkey("bar")).get should equal(Replies.errWrongType)
+    db.sismember(rkey("foo"), rkey("bar")).toJavaFuture.get() should equal(Replies.errWrongType)
   }
 
   it should "return 0 if the key does not exist" in {
     val db = new Db(FuturePool.immediatePool)
-    db.sismember(rkey("foo"), rkey("bar")).get should equal(IntegerReply(0))
+    db.sismember(rkey("foo"), rkey("bar")).toJavaFuture.get() should equal(IntegerReply(0))
   }
 
   it should "return 0 if the value is not a member of the set" in {
     val db = new Db(FuturePool.immediatePool)
     db.sadd(rkey("foo"), rkeys("one", "two", "three"))
 
-    db.sismember(rkey("foo"), rkey("four")).get should equal(IntegerReply(0))
+    db.sismember(rkey("foo"), rkey("four")).toJavaFuture.get() should equal(IntegerReply(0))
   }
 
   it should "return 1 if the value is a member of the set" in {
     val db = new Db(FuturePool.immediatePool)
     db.sadd(rkey("foo"), rkeys("one", "two", "three"))
 
-    db.sismember(rkey("foo"), rkey("two")).get should equal(IntegerReply(1))
+    db.sismember(rkey("foo"), rkey("two")).toJavaFuture.get() should equal(IntegerReply(1))
   }
 
   behavior of "SMEMBERS"
@@ -94,19 +94,19 @@ class SetsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     val db = new Db(FuturePool.immediatePool)
     db.set(rkey("foo"), "abc".getBytes)
 
-    db.smembers(rkey("foo")).get should equal(Replies.errWrongType)
+    db.smembers(rkey("foo")).toJavaFuture.get() should equal(Replies.errWrongType)
   }
 
   it should "return an empty list if the key does not exist" in {
     val db = new Db(FuturePool.immediatePool)
-    db.smembers(rkey("foo")).get should equal(EmptyMBulkReply())
+    db.smembers(rkey("foo")).toJavaFuture.get() should equal(EmptyMBulkReply())
   }
 
   it should "return all the members in the set" in {
     val db = new Db(FuturePool.immediatePool)
     db.sadd(rkey("foo"), rkeys("one", "two", "three"))
 
-    val list = decodeMBulkReply(db.smembers(rkey("foo")).get.asInstanceOf[MBulkReply])
+    val list = decodeMBulkReply(db.smembers(rkey("foo")).toJavaFuture.get().asInstanceOf[MBulkReply])
     list.toSet should equal(collection.Set("one", "two", "three"))
   }
 
@@ -116,12 +116,12 @@ class SetsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     val db = new Db(FuturePool.immediatePool)
     db.set(rkey("foo"), "abc".getBytes)
 
-    db.srem(rkey("foo"), rkeys("bar")).get should equal(Replies.errWrongType)
+    db.srem(rkey("foo"), rkeys("bar")).toJavaFuture.get() should equal(Replies.errWrongType)
   }
 
   it should "return 0 if the key does not exist" in {
     val db = new Db(FuturePool.immediatePool)
-    db.srem(rkey("foo"), rkeys("bar", "baz")).get should equal(IntegerReply(0))
+    db.srem(rkey("foo"), rkeys("bar", "baz")).toJavaFuture.get() should equal(IntegerReply(0))
   }
 
   it should "delete the given fields" in {
@@ -130,17 +130,17 @@ class SetsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
 
     db.srem(rkey("foo"), rkeys("field1", "field3"))
 
-    db.sismember(rkey("foo"), rkey("field1")).get should equal(IntegerReply(0))
-    db.sismember(rkey("foo"), rkey("field2")).get should equal(IntegerReply(1))
-    db.sismember(rkey("foo"), rkey("field3")).get should equal(IntegerReply(0))
-    db.sismember(rkey("foo"), rkey("field4")).get should equal(IntegerReply(1))
+    db.sismember(rkey("foo"), rkey("field1")).toJavaFuture.get() should equal(IntegerReply(0))
+    db.sismember(rkey("foo"), rkey("field2")).toJavaFuture.get() should equal(IntegerReply(1))
+    db.sismember(rkey("foo"), rkey("field3")).toJavaFuture.get() should equal(IntegerReply(0))
+    db.sismember(rkey("foo"), rkey("field4")).toJavaFuture.get() should equal(IntegerReply(1))
   }
 
   it should "return the number of fields actually deleted" in {
     val db = new Db(FuturePool.immediatePool)
     db.sadd(rkey("foo"), rkeys("field2", "field4"))
 
-    db.srem(rkey("foo"), rkeys("field1", "field2", "field3", "field4")).get should equal(IntegerReply(2))
+    db.srem(rkey("foo"), rkeys("field1", "field2", "field3", "field4")).toJavaFuture.get() should equal(IntegerReply(2))
   }
 
   it should "delete the set if it becomes empty" in {
@@ -148,7 +148,7 @@ class SetsSpec extends FlatSpec with ShouldMatchers with DbTestUtils {
     db.sadd(rkey("foo"), rkeys("field2", "field4"))
 
     db.srem(rkey("foo"), rkeys("field1", "field2", "field3", "field4"))
-    db.taipu(rkey("foo")).get should equal(StatusReply("none"))
+    db.taipu(rkey("foo")).toJavaFuture.get() should equal(StatusReply("none"))
 
   }
 
