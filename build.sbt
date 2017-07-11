@@ -1,3 +1,5 @@
+import sbt.Credentials._
+
 organization := "com.github.cb372"
 
 name := "fedis"
@@ -27,4 +29,25 @@ libraryDependencies +="org.scalatest" % "scalatest_2.11" % "2.1.7" % "test"
 
 scalacOptions += "-unchecked"
 
-publishTo := Some(Resolver.file("file",  new File( "../cb372.github.com/m2/releases" )) )
+//publishTo := Some(Resolver.file("file",  new File( "../cb372.github.com/m2/releases" )) )
+//publishTo := Some(Resolver.file("file",  new File( "../cb372.github.com/m2/releases" )) )
+//http://106.120.210.50:8081/nexus/content/groups/public/
+
+/*publishTo := Some("Sonatype Snapshots Nexus" at "http://106.120.210.50:8081/nexus/content/repositories/releases")*/
+
+publishMavenStyle := true
+pomIncludeRepository := { _ => false }
+
+publishTo := {
+  val nexus = "http://106.120.210.50:8081/"
+  if (isSnapshot.value)
+    Some("snapshots" at nexus + "nexus/content/repositories/snapshots")
+  else
+  //  Some("releases"  at nexus + "nexus/content/repositories/releases")
+    Some("releases"  at nexus + "nexus/service/local/staging/deploy/maven2")
+}
+
+credentials += Credentials("Sonatype Nexus Repository Manager", "106.120.210.50:8081", "admin", "chen_123qwe")
+//Credentials.add("Sonatype Nexus Repository Manager", "106.120.210.50:8081", "admin","chen_123qwe")
+
+

@@ -35,6 +35,7 @@ Benefits:
 
 * Using Maven:
 
+       /*
         <dependency>
             <groupId>com.github.cb372</groupId>
             <artifactId>fedis_2.11</artifactId>
@@ -47,7 +48,7 @@ Benefits:
           <url>http://cb372.github.com/m2/releases</url>
         </repository>
 
-
+         */
  
 * Using SBT:
 
@@ -61,8 +62,8 @@ Benefits:
            "ch.qos.logback" % "logback-classic" % "1.0.4" % "test"
            )
             
-        resolvers += "Chris Birchall's Maven repo" at "http://cb372.github.com/m2/releases"
-         libraryDependencies += "com.github.cb372" %% "fedis" % "1.3.0"
+      //  resolvers += "Chris Birchall's Maven repo" at "http://cb372.github.com/m2/releases"
+      //   libraryDependencies += "com.github.cb372" %% "fedis" % "1.3.0"
 
 ## Supported commands
 

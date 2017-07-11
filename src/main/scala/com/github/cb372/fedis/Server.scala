@@ -30,7 +30,7 @@ object Server {
     val server = ServerBuilder()
       .codec(RedisServerCodec())
       .bindTo(new InetSocketAddress(options.port))
-      .name("redisserver")
+      .name("redisServer")
       .build(myService)
 
     new ResourceTidyingServerWrapper(server, resources)
@@ -87,20 +87,35 @@ object Server {
       }
     }*/
 
+    override def close( after: Duration ): Future[Unit] = {
+      println("close start---------------------------------- .......")
+
+      resources.close()
+
+      base.close(after)
+
+      //super.close( after )
+
+    }
+
     override def boundAddress: SocketAddress = base.boundAddress
 
-    override protected def closeServer(deadline: Time): Future[Unit] = ???
+     protected def closeServer(deadline: Time): Future[Unit] = {
 
-
-    override def ready(timeout: Duration)(implicit permit: Awaitable.CanAwait): ResourceTidyingServerWrapper.this.type = ???
-
+       if (base != null)
+         base.close(deadline)
+       else
+         Future.Unit
+      // base.closeServer(deadline)
+       ///super.closeServer(deadline)
+    }
 
     override def result(timeout: Duration)(implicit permit: Awaitable.CanAwait): Unit =base.result(timeout)
 
 
     override def isReady(implicit permit: Awaitable.CanAwait): Boolean = base.isReady
 
-
+    override def ready( timeout: Duration )( implicit permit: Awaitable.CanAwait ): ResourceTidyingServerWrapper.this.type = ???
   }
 }
 
