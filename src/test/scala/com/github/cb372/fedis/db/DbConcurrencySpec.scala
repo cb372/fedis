@@ -1,18 +1,21 @@
 package com.github.cb372.fedis.db
 
-import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.fixture
-import java.util.concurrent.{CyclicBarrier, TimeUnit, Executors, CountDownLatch}
+import org.scalatest.{Matchers, Outcome, fixture}
+import java.util.concurrent.{CountDownLatch, CyclicBarrier, Executors, TimeUnit}
+
 import com.twitter.util.{Future, FuturePool}
 import com.twitter.finagle.redis.protocol._
 import com.twitter.finagle.redis.util.CBToString
+
 
 /**
  * Author: chris
  * Created: 6/20/12
  */
 
-class DbConcurrencySpec extends fixture.FlatSpec with ShouldMatchers with DbTestUtils {
+class DbConcurrencySpec extends fixture.FlatSpec with  Matchers with DbTestUtils {
+
+  import com.github.cb372.fedis.util.ImplicitConversions._
 
   behavior of "Db"
 
@@ -35,7 +38,7 @@ class DbConcurrencySpec extends fixture.FlatSpec with ShouldMatchers with DbTest
       i <- 0 until numHashes
       j <- 0 until numThreads
     } {
-      db.hget(rkey(i.toString), rkey(j.toString)).get match {
+      db.hget(rkey(i.toString), rkey(j.toString)).toJavaFuture.get match {
         case reply: BulkReply => {
           val msg = CBToString(reply.message)
           msg should equal(j.toString)
@@ -49,7 +52,8 @@ class DbConcurrencySpec extends fixture.FlatSpec with ShouldMatchers with DbTest
 
   type FixtureParam = FuturePool
 
-  def withFixture(test: OneArgTest) {
+  //protected def withFixture(test: OneArgTest): Outcome
+   def withFixture(test: OneArgTest):Outcome= {
     val exec = Executors.newFixedThreadPool(10)
     try {
       test(FuturePool(exec))

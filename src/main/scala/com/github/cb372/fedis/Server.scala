@@ -4,13 +4,11 @@ import db.ExpiredEntriesReaper
 import service.RedisService
 import codec.RedisServerCodec
 import filter.{AuthCheck, SessionManagement}
-
 import com.twitter.finagle.redis.protocol._
-import com.twitter.finagle.builder.{Server => FinagleServer, ServerBuilder}
-import com.twitter.util.{JavaTimer, Duration, FuturePool}
-
+import com.twitter.finagle.builder.{ServerBuilder, Server => FinagleServer}
+import com.twitter.util.{Command => _, _}
 import java.io.Closeable
-import java.net.{SocketAddress, InetSocketAddress}
+import java.net.{InetSocketAddress, SocketAddress}
 import java.util.concurrent.Executors
 
 case class Options(port: Int = 6379,
@@ -32,7 +30,7 @@ object Server {
     val server = ServerBuilder()
       .codec(RedisServerCodec())
       .bindTo(new InetSocketAddress(options.port))
-      .name("redisserver")
+      .name("redisServer")
       .build(myService)
 
     new ResourceTidyingServerWrapper(server, resources)
@@ -79,21 +77,51 @@ object Server {
    */
   private class ResourceTidyingServerWrapper(base: FinagleServer,
                                              resources: Resources) extends FinagleServer {
-    def localAddress = base.localAddress
+     // def localAddress  = base.boundAddress
 
-    def close(timeout: Duration) {
+    /*override def close(timeout: Duration) {
       try {
         base.close(timeout)
       } finally {
         resources.close()
       }
+    }*/
+
+    override def close( after: Duration ): Future[Unit] = {
+      println("close start---------------------------------- .......")
+
+      resources.close()
+
+      base.close(after)
+
+      //super.close( after )
+
     }
+
+    override def boundAddress: SocketAddress = base.boundAddress
+
+     protected def closeServer(deadline: Time): Future[Unit] = {
+
+       if (base != null)
+         base.close(deadline)
+       else
+         Future.Unit
+      // base.closeServer(deadline)
+       ///super.closeServer(deadline)
+    }
+
+    override def result(timeout: Duration)(implicit permit: Awaitable.CanAwait): Unit =base.result(timeout)
+
+
+    override def isReady(implicit permit: Awaitable.CanAwait): Boolean = base.isReady
+
+    override def ready( timeout: Duration )( implicit permit: Awaitable.CanAwait ): ResourceTidyingServerWrapper.this.type = ???
   }
 }
 
 object Constants {
 
-  // The maximum DB index that can be SELECTed
+   // The maximum DB index that can be SELECTed
   val maxDbIndex = 15
   val numDbs = maxDbIndex + 1 // because DBs are zero-indexed
 

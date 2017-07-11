@@ -30,12 +30,16 @@ Benefits:
 
 ## Download
 
+* scala version
+      2.11.8
+
 * Using Maven:
 
+       /*
         <dependency>
             <groupId>com.github.cb372</groupId>
-            <artifactId>fedis_2.9.2</artifactId>
-            <version>1.1.0</version>
+            <artifactId>fedis_2.11</artifactId>
+            <version>1.3.0</version>
         </dependency>
         
         <repository>
@@ -44,10 +48,22 @@ Benefits:
           <url>http://cb372.github.com/m2/releases</url>
         </repository>
 
+         */
+ 
 * Using SBT:
 
-        resolvers += "Chris Birchall's Maven repo" at "http://cb372.github.com/m2/releases"
-        libraryDependencies += "com.github.cb372" %% "fedis" % "1.1.0"
+         libraryDependencies ++ =Seq(
+           "com.twitter" %% "finagle-redis" % "6.35.0" ,
+           "com.twitter" % "util-logging_2.11" % "6.3.0",
+           "com.twitter" % "util-app_2.11" % "6.35.0" ,
+           "com.twitter" % "util-collection_2.11" % "6.35.0" ,
+           "com.twitter" % "util-codec_2.11" % "6.35.0" ,
+           "net.debasishg" % "redisclient_2.11" % "3.4" % "test",
+           "ch.qos.logback" % "logback-classic" % "1.0.4" % "test"
+           )
+            
+      //  resolvers += "Chris Birchall's Maven repo" at "http://cb372.github.com/m2/releases"
+      //   libraryDependencies += "com.github.cb372" %% "fedis" % "1.3.0"
 
 ## Supported commands
 
@@ -56,3 +72,7 @@ See the [Wiki page](https://github.com/cb372/fedis/wiki/Supported-Redis-Commands
 ## Restrictions
 
 * Performance: Don't expect the blazing speed of Redis!
+
+ 
+      
+      
